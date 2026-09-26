@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>gygo · 光鸭分享追更</title>
+<style>
+  :root{--bg:#0f1115;--card:#171a21;--line:#262b36;--fg:#e6e8ee;--dim:#8b93a7;
+        --ok:#3ecf8e;--err:#ff6b6b;--warn:#ffb454;--acc:#5b8cff}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--fg);
+       font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  h1{font-size:20px;margin:0 0 4px}
+  h1 small{color:var(--dim);font-size:12px;font-weight:400;margin-left:8px}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:18px;margin-bottom:16px}
+  .card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .card h2 .sp{flex:1}
+  label{display:block;font-size:13px;color:var(--dim);margin:12px 0 5px}
+  input,textarea,select{width:100%;background:#0d0f14;border:1px solid var(--line);
+    color:var(--fg);border-radius:7px;padding:9px 11px;font-size:14px;font-family:inherit}
+  textarea{min-height:78px;resize:vertical}
+  input:focus,textarea:focus{outline:none;border-color:var(--acc)}
+  .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  .row>div{flex:1;min-width:150px}
+  button{background:var(--acc);color:#fff;border:0;border-radius:7px;padding:9px 16px;
+    font-size:14px;cursor:pointer;font-family:inherit}
+  button:hover{filter:brightness(1.1)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--dim)}
+  button.ghost:hover{color:var(--fg);border-color:var(--dim)}
+  button.danger{background:transparent;border:1px solid rgba(255,107,107,.4);color:var(--err)}
+  button.tiny{padding:5px 10px;font-size:12px}
+  .banner{background:#3a1d1d;border:1px solid var(--err);color:#ffbcbc;
+    padding:11px 14px;border-radius:8px;margin-bottom:16px;display:none}
+  .banner.show{display:block}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--dim);font-weight:500;padding:8px 10px;
+     border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px;border-bottom:1px solid #1e222b;vertical-align:top}
+  td.path{color:var(--dim);font-size:12px;word-break:break-all;max-width:260px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;white-space:nowrap}
+  .t-ok{background:rgba(62,207,142,.14);color:var(--ok)}
+  .t-error{background:rgba(255,107,107,.14);color:var(--err)}
+  .t-invalid{background:rgba(255,107,107,.22);color:var(--err)}
+  .t-paused{background:rgba(255,180,84,.14);color:var(--warn)}
+  .t-pending{background:rgba(139,147,167,.14);color:var(--dim)}
+  .msg{margin-top:12px;font-size:13px;display:none;padding:9px 12px;border-radius:7px;
+       white-space:pre-wrap;word-break:break-all}
+  .msg.ok{display:block;background:rgba(62,207,142,.1);color:var(--ok)}
+  .msg.err{display:block;background:rgba(255,107,107,.1);color:var(--err)}
+  .empty{color:var(--dim);text-align:center;padding:26px;font-size:13px}
+  .hint{color:var(--dim);font-size:12px;margin-top:6px}
+  .acts{display:flex;gap:6px;flex-wrap:wrap}
+  .acts button{padding:5px 10px;font-size:12px}
+  details{margin-top:12px}
+  summary{cursor:pointer;color:var(--dim);font-size:13px;user-select:none}
+  summary:hover{color:var(--fg)}
+  .adv{background:#0d0f14;border:1px solid var(--line);border-radius:8px;padding:12px 14px 4px;margin-top:8px}
+  .check{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:13px;margin:8px 0}
+  .check input{width:auto;margin:0}
+  #logs{background:#0b0d11;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+        font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;max-height:320px;overflow:auto;
+        white-space:pre-wrap;word-break:break-all;color:var(--dim)}
+  #logs .lv-ERROR{color:var(--err)} #logs .lv-WARN{color:var(--warn)} #logs .lv-INFO{color:#a8b0c0}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;
+         align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.show{display:flex}
+  .modal .box{background:var(--card);border:1px solid var(--line);border-radius:10px;
+              width:min(460px,100%);max-height:70vh;display:flex;flex-direction:column}
+  .modal .hd{padding:14px 16px;border-bottom:1px solid var(--line);font-size:14px;
+             display:flex;align-items:center;gap:8px}
+  .modal .bd{padding:12px 16px;overflow:auto;flex:1}
+  .modal .ft{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+  .diritem{padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;gap:8px;align-items:center}
+  .diritem:hover{background:#1e222b}
+  .editrow td{background:#12151c}
+</style>
+</head>
+<body>
+<h1>gygo · 光鸭分享追更 <small id="ver"></small></h1>
+<div class="sub">粘贴光鸭分享链接 → 自动定时检查 → 出新集就自动转存到你的光鸭云盘</div>
+
+<div class="banner" id="expireBanner">
+  登录已失效，请重新登录。重新登录后监控会自动恢复。
+</div>
+
+<!-- 登录 -->
+<div class="card">
+  <h2>🔐 登录光鸭云盘</h2>
+  <div id="loginBox">
+    <div class="row">
+      <div><label>手机号</label><input id="phone" placeholder="13800138000" autocomplete="off"></div>
+      <div style="flex:0 0 auto"><button id="btnSend">发送验证码</button></div>
+    </div>
+    <div class="row">
+      <div><label>短信验证码</label><input id="code" placeholder="6 位数字" autocomplete="off"></div>
+      <div style="flex:0 0 auto"><button id="btnLogin">登录</button></div>
+    </div>
+  </div>
+  <div id="loggedBox" style="display:none">
+    <div style="color:var(--ok);margin-bottom:10px">已登录：<b id="who"></b></div>
+    <button class="ghost" id="btnLogout">退出登录</button>
+  </div>
+  <div class="msg" id="loginMsg"></div>
+</div>
+
+<!-- 钉钉机器人通知 -->
+<div class="card">
+  <h2>🔔 钉钉机器人通知</h2>
+  <div class="hint" style="margin-top:0">
+    在钉钉群里加一个「自定义机器人」，把 Webhook 地址（和可选的加签密钥）填在这里保存即可，
+    不需要改 Docker 配置。三种情况会发通知：新增监控时、转存成功时、链接失效时。
+  </div>
+  <label>Webhook 地址</label>
+  <input id="dtWebhook" placeholder="https://oapi.dingtalk.com/robot/send?access_token=xxxxx">
+  <label>加签密钥（安全设置选了"加签"才需要填，选"自定义关键词"留空即可）</label>
+  <input id="dtSecret" placeholder="SEC开头的一串字符" autocomplete="off">
+  <label class="check">
+    <input type="checkbox" id="dtEnabled">
+    启用钉钉通知
+  </label>
+  <div style="margin-top:14px;display:flex;gap:8px">
+    <button id="btnDtSave">保存配置</button>
+    <button class="ghost" id="btnDtTest">测试连通</button>
+  </div>
+  <div class="msg" id="dtMsg"></div>
+</div>
+
+<!-- 联动 SmartStrm -->
+<div class="card">
+  <h2>🎬 联动 SmartStrm</h2>
+  <div class="hint" style="margin-top:0">
+    转存成功后自动 POST 到 SmartStrm 的 Webhook，触发它立即执行指定任务生成/更新 STRM，
+    不用等它的定时扫描。地址在 SmartStrm「系统设置→Webhook」里获取。
+  </div>
+  <label>Webhook 地址</label>
+  <input id="ssWebhook" placeholder="http://smartstrm地址:8024/webhook/xxxxxxxx">
+  <label>要触发的任务名（已存在的任务，多个用英文逗号分隔，如 tv,movie）</label>
+  <input id="ssTasks" placeholder="tv,movie">
+  <label>存储路径（可选，必须填 SmartStrm 那边任务本身路径的路径或子路径，格式对不上会导致它静默不执行；不确定就留空，交给 SmartStrm 按任务自己的配置全量处理）</label>
+  <input id="ssPath" placeholder="留空即可，一般不用填">
+  <label>延迟执行秒数（可选，转存完 gygo 自己等够这个时间再触发，不依赖 SmartStrm 自己的延迟）</label>
+  <input id="ssDelay" type="number" min="0" placeholder="0" style="max-width:140px">
+  <label class="check">
+    <input type="checkbox" id="ssEnabled">
+    启用 SmartStrm 联动
+  </label>
+  <div style="margin-top:14px;display:flex;gap:8px">
+    <button id="btnSsSave">保存配置</button>
+    <button class="ghost" id="btnSsTest">测试连通</button>
+  </div>
+  <div class="msg" id="ssMsg"></div>
+</div>
+
+<!-- 添加监控 -->
+<div class="card">
+  <h2>➕ 添加追更监控</h2>
+  <label>光鸭分享链接（可整段粘贴，提取码会自动识别）</label>
+  <textarea id="shareUrl" placeholder="https://www.guangyapan.com/s/xxxxxx 提取码：abcd"></textarea>
+  <div class="row">
+    <div><label>转存到我的目录（留空=根目录）</label>
+      <input id="targetPath" placeholder="影视/美剧/某某剧"></div>
+    <div style="flex:0 0 auto"><button class="ghost" id="btnBrowse">浏览…</button></div>
+    <div style="flex:0 0 150px"><label>扫描间隔（分钟）</label>
+      <input id="interval" type="number" value="60" min="60"></div>
+  </div>
+  <div class="hint">间隔最低 60 分钟。调太低会触发光鸭风控，得不偿失。</div>
+
+  <label class="check">
+    <input type="checkbox" id="transferExisting" checked>
+    添加时立即转存链接里已有的视频（取消勾选则只追新、不转已有的）
+  </label>
+
+  <details>
+    <summary>▸ 高级选项（过滤规则 / 目录结构）</summary>
+    <div class="adv">
+      <label class="check">
+        <input type="checkbox" id="keepTree" checked>
+        保持分享里的子目录结构（多季剧强烈建议开着，否则所有季会平铺在一起）
+      </label>
+      <div class="row">
+        <div><label>只转存文件名含这些词（留空=不限）</label>
+          <input id="includeKw" placeholder="S01, 4K, 2160p"></div>
+        <div><label>排除文件名含这些词</label>
+          <input id="excludeKw" placeholder="预告, 花絮, srt"></div>
+      </div>
+      <div style="max-width:200px">
+        <label>小于这个体积的不转（MB）</label>
+        <input id="minSize" type="number" value="0" min="0">
+      </div>
+      <div class="hint">多个关键词用逗号分隔，支持 <code>*</code> 通配（如 <code>S01E0*</code>）。</div>
+    </div>
+  </details>
+
+  <div style="margin-top:14px"><button id="btnAdd">＋ 添加监控</button></div>
+  <div class="msg" id="addMsg"></div>
+</div>
+
+<!-- 列表 -->
+<div class="card">
+  <h2>📡 监控列表 <span style="color:var(--dim);font-weight:400;font-size:12px">（每 30 秒自动刷新）</span></h2>
+  <div class="msg" id="listMsg"></div>
+  <div id="listWrap"><div class="empty">还没有监控项</div></div>
+</div>
+
+<!-- 日志 -->
+<div class="card">
+  <h2>📜 运行日志 <span class="sp"></span>
+    <button class="ghost tiny" id="btnLogRefresh">刷新</button>
+    <button class="ghost tiny" id="btnLogMore">只看异常</button>
+  </h2>
+  <div id="logs">加载中…</div>
+  <div class="hint">同时写入容器里的 <code>/data/gygo.log</code>，超过 1MB 自动轮转。</div>
+</div>
+
+<!-- 目录选择弹窗 -->
+<div class="modal" id="dirModal">
+  <div class="box">
+    <div class="hd">选择转存目录 <span style="color:var(--dim);font-size:12px" id="dirPath">/</span></div>
+    <div class="bd" id="dirBody">加载中…</div>
+    <div class="ft">
+      <button class="ghost" id="dirUp">↑ 上一级</button>
+      <button class="ghost" id="dirCancel">取消</button>
+      <button id="dirPick">选这里</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let logLevelOnly = false;
+
+function show(el, msg, ok){
+  el.className = 'msg ' + (ok ? 'ok' : 'err');
+  el.textContent = msg;
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.className='msg'; }, ok?5000:9000);
+}
+async function api(url, opt){
+  const r = await fetch(url, opt || {});
+  return await r.json();
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ---------- 登录 ----------
+$('btnSend').onclick = async () => {
+  const phone = $('phone').value.trim();
+  if(!phone) return show($('loginMsg'), '请填写手机号', false);
+  $('btnSend').disabled = true; $('btnSend').textContent = '发送中…';
+  const r = await api('/api/sms/send', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone})});
+  $('btnSend').disabled = false; $('btnSend').textContent = '发送验证码';
+  show($('loginMsg'), r.msg || '已发送', r.ok);
+};
+$('btnLogin').onclick = async () => {
+  const phone = $('phone').value.trim(), code = $('code').value.trim();
+  if(!phone || !code) return show($('loginMsg'), '手机号和验证码都要填', false);
+  $('btnLogin').disabled = true;
+  const r = await api('/api/sms/login', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, code})});
+  $('btnLogin').disabled = false;
+  show($('loginMsg'), r.msg || '', r.ok);
+  if(r.ok){ $('code').value=''; refresh(); }
+};
+$('btnLogout').onclick = async () => {
+  await api('/api/logout', {method:'POST'});
+  refresh();
+};
+
+// ---------- 钉钉通知 ----------
+async function loadDingtalk(){
+  const r = await api('/api/dingtalk');
+  if(!r.ok) return;
+  const c = r.config || {};
+  $('dtWebhook').value = c.webhook || '';
+  $('dtSecret').value = c.secret || '';
+  $('dtEnabled').checked = !!c.enabled;
+}
+$('btnDtSave').onclick = async () => {
+  $('btnDtSave').disabled = true; $('btnDtSave').textContent = '保存中…';
+  const r = await api('/api/dingtalk', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      webhook: $('dtWebhook').value.trim(),
+      secret: $('dtSecret').value.trim(),
+      enabled: $('dtEnabled').checked})});
+  $('btnDtSave').disabled = false; $('btnDtSave').textContent = '保存配置';
+  show($('dtMsg'), r.msg || (r.ok ? '已保存' : '保存失败'), r.ok);
+};
+$('btnDtTest').onclick = async () => {
+  const webhook = $('dtWebhook').value.trim();
+  if(!webhook) return show($('dtMsg'), '请先填写 Webhook 地址', false);
+  $('btnDtTest').disabled = true; $('btnDtTest').textContent = '测试中…';
+  const r = await api('/api/dingtalk/test', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({webhook, secret: $('dtSecret').value.trim()})});
+  $('btnDtTest').disabled = false; $('btnDtTest').textContent = '测试连通';
+  show($('dtMsg'), r.msg || (r.ok ? '发送成功，去钉钉群里看看' : '发送失败'), r.ok);
+};
+
+// ---------- 联动 SmartStrm ----------
+async function loadSmartstrm(){
+  const r = await api('/api/smartstrm');
+  if(!r.ok) return;
+  const c = r.config || {};
+  $('ssWebhook').value = c.webhook || '';
+  $('ssTasks').value = c.tasks || '';
+  $('ssPath').value = c.storage_path || '';
+  $('ssDelay').value = c.delay || 0;
+  $('ssEnabled').checked = !!c.enabled;
+}
+$('btnSsSave').onclick = async () => {
+  $('btnSsSave').disabled = true; $('btnSsSave').textContent = '保存中…';
+  const r = await api('/api/smartstrm', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      webhook: $('ssWebhook').value.trim(),
+      tasks: $('ssTasks').value.trim(),
+      storage_path: $('ssPath').value.trim(),
+      delay: $('ssDelay').value.trim() || 0,
+      enabled: $('ssEnabled').checked})});
+  $('btnSsSave').disabled = false; $('btnSsSave').textContent = '保存配置';
+  show($('ssMsg'), r.msg || (r.ok ? '已保存' : '保存失败'), r.ok);
+};
+$('btnSsTest').onclick = async () => {
+  const webhook = $('ssWebhook').value.trim();
+  const tasks = $('ssTasks').value.trim();
+  if(!webhook) return show($('ssMsg'), '请先填写 Webhook 地址', false);
+  if(!tasks) return show($('ssMsg'), '请先填写要触发的任务名', false);
+  $('btnSsTest').disabled = true; $('btnSsTest').textContent = '测试中…';
+  const r = await api('/api/smartstrm/test', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({webhook, tasks, storage_path: $('ssPath').value.trim()})});
+  $('btnSsTest').disabled = false; $('btnSsTest').textContent = '测试连通';
+  show($('ssMsg'), r.msg || (r.ok ? '触发成功' : '触发失败'), r.ok);
+};
+
+// ---------- 目录浏览 ----------
+let dirStack = [];   // [{fid, name}]
+$('btnBrowse').onclick = () => { dirStack = []; openDir(''); };
+$('dirCancel').onclick = () => $('dirModal').classList.remove('show');
+$('dirUp').onclick = () => { if(dirStack.length){ dirStack.pop(); openDir(currentFid()); } };
+$('dirPick').onclick = () => {
+  $('targetPath').value = dirStack.map(x => x.name).join('/');
+  $('dirModal').classList.remove('show');
+};
+function currentFid(){ return dirStack.length ? dirStack[dirStack.length-1].fid : ''; }
+async function openDir(fid){
+  $('dirModal').classList.add('show');
+  $('dirPath').textContent = '/' + dirStack.map(x => x.name).join('/');
+  $('dirBody').innerHTML = '加载中…';
+  const r = await api('/api/dirs?fid=' + encodeURIComponent(fid || ''));
+  if(!r.ok){ $('dirBody').innerHTML = '<div class="empty">' + esc(r.msg || '读取失败') + '</div>'; return; }
+  if(!(r.items||[]).length){
+    $('dirBody').innerHTML = '<div class="empty">这个目录下没有子文件夹</div>';
+    return;
+  }
+  $('dirBody').innerHTML = r.items.map(d =>
+    `<div class="diritem" data-fid="${esc(d.fid)}" data-name="${esc(d.name)}">📁 ${esc(d.name)}</div>`
+  ).join('');
+  [...$('dirBody').querySelectorAll('.diritem')].forEach(el => {
+    el.onclick = () => { dirStack.push({fid: el.dataset.fid, name: el.dataset.name}); openDir(el.dataset.fid); };
+  });
+}
+
+// ---------- 添加 ----------
+$('btnAdd').onclick = async () => {
+  const share_url = $('shareUrl').value.trim();
+  if(!share_url) return show($('addMsg'), '请粘贴分享链接', false);
+  $('btnAdd').disabled = true; $('btnAdd').textContent = '添加中…';
+  const r = await api('/api/monitors', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({share_url,
+      target_path: $('targetPath').value.trim(),
+      interval_min: parseInt($('interval').value || '60', 10),
+      keep_tree: $('keepTree').checked,
+      include_kw: $('includeKw').value.trim(),
+      exclude_kw: $('excludeKw').value.trim(),
+      min_size_mb: parseInt($('minSize').value || '0', 10),
+      transfer_existing: $('transferExisting').checked})});
+  $('btnAdd').disabled = false; $('btnAdd').textContent = '＋ 添加监控';
+  show($('addMsg'), r.msg || (r.ok ? (r.monitor && r.monitor.last_result || '已添加') : '添加失败'), r.ok);
+  if(r.ok){ $('shareUrl').value=''; refresh(); }
+};
+
+// ---------- 列表 ----------
+let editing = null;
+
+async function refresh(){
+  const s = await api('/api/status');
+  if(s.version) $('ver').textContent = 'v' + s.version;
+  const logged = s.logged;
+  $('loginBox').style.display = logged ? 'none' : 'block';
+  $('loggedBox').style.display = logged ? 'block' : 'none';
+  $('expireBanner').className = 'banner' + (s.expired ? ' show' : '');
+  if(logged) $('who').textContent = s.phone || '已登录';
+
+  const d = await api('/api/monitors');
+  const items = d.monitors || [];
+  if(!items.length){
+    $('listWrap').innerHTML = '<div class="empty">还没有监控项</div>';
+    return;
+  }
+  let html = '<table><tr><th>分享</th><th>转存到</th><th>状态</th><th>上次扫描</th><th>最近结果</th><th>操作</th></tr>';
+  for(const m of items){
+    const tag = 't-' + (m.status || 'pending');
+    const label = {ok:'正常', error:'出错', invalid:'链接失效', paused:'已暂停', pending:'待扫描'}[m.status] || m.status;
+    const rules = [];
+    if(m.include_kw) rules.push('含 ' + m.include_kw);
+    if(m.exclude_kw) rules.push('不含 ' + m.exclude_kw);
+    if(m.min_size_mb) rules.push('≥' + m.min_size_mb + 'MB');
+    html += `<tr>
+      <td>${m.link_name ? esc(m.link_name) + '<br>' : ''}<span style="color:var(--dim);font-size:12px">${esc((m.share_url||'').slice(0,42))}${(m.share_url||'').length>42?'…':''}</span></td>
+      <td class="path">${esc(m.target_path || '/（根目录）')}
+        <div style="margin-top:4px;font-size:11px;color:var(--dim)">
+          ${m.keep_tree===false?'平铺':'保结构'}${rules.length?' · '+esc(rules.join(' · ')):''}
+        </div></td>
+      <td><span class="tag ${tag}">${label}</span>${m.enabled?'':' <span class="tag t-pending">已停用</span>'}</td>
+      <td style="white-space:nowrap;color:var(--dim)">${esc(m.last_scan || '—')}<br><span style="font-size:12px">每 ${m.interval_min} 分钟</span></td>
+      <td class="path">${esc(m.last_result || '—')}</td>
+      <td><div class="acts">
+        <button class="ghost" onclick="scanNow(${m.id}, this)">立即扫描</button>
+        <button class="ghost" onclick="toggle(${m.id})">${m.enabled?'停用':'启用'}</button>
+        <button class="ghost" onclick="editRow(${m.id})">编辑</button>
+        <button class="danger" onclick="resetBase(${m.id})">重转全部</button>
+        <button class="danger" onclick="del(${m.id})">删除</button>
+      </div></td></tr>`;
+    if(editing === m.id){
+      html += `<tr class="editrow"><td colspan="6">
+        <div class="row">
+          <div><label>转存目录</label><input id="e_path_${m.id}" value="${esc(m.target_path||'')}"></div>
+          <div style="flex:0 0 150px"><label>间隔(分钟)</label>
+            <input id="e_iv_${m.id}" type="number" value="${m.interval_min}" min="60"></div>
+        </div>
+        <div class="row">
+          <div><label>只转含</label><input id="e_inc_${m.id}" value="${esc(m.include_kw||'')}"></div>
+          <div><label>排除含</label><input id="e_exc_${m.id}" value="${esc(m.exclude_kw||'')}"></div>
+          <div style="flex:0 0 130px"><label>最小(MB)</label>
+            <input id="e_min_${m.id}" type="number" value="${m.min_size_mb||0}" min="0"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="e_kt_${m.id}" ${m.keep_tree!==false?'checked':''}>
+          保持分享里的子目录结构</label>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="saveEdit(${m.id})">保存</button>
+          <button class="ghost" onclick="editing=null;refresh()">取消</button>
+        </div></td></tr>`;
+    }
+  }
+  $('listWrap').innerHTML = html + '</table>';
+}
+
+async function scanNow(id, btn){
+  btn.disabled = true; btn.textContent = '扫描中…';
+  const r = await api('/api/monitors/' + id + '/scan', {method:'POST'});
+  btn.disabled = false; btn.textContent = '立即扫描';
+  const res = r.result || {};
+  const txt = r.ok
+    ? ('✅ ' + (res.msg || ('新增 ' + (res.added||0) + ' 个'
+        + (res.pending ? ('，还有 ' + res.pending + ' 个排队等下轮') : '')
+        + (res.filtered ? ('，过滤 ' + res.filtered + ' 个') : ''))))
+    : ('❌ ' + (r.msg || res.msg || '未知错误'));
+  show($('listMsg'), txt, r.ok);
+  refresh();
+}
+async function toggle(id){ await api('/api/monitors/' + id + '/toggle', {method:'POST'}); refresh(); }
+async function del(id){
+  if(confirm('确定删除这个监控项？\n（只是不再监控，已经转存的文件不受影响）')){
+    await api('/api/monitors/' + id, {method:'DELETE'});
+    refresh();
+  }
+}
+async function resetBase(id){
+  if(confirm('清空基线后，下一轮扫描会把这个分享里的所有文件当成新出的重新转存一遍。\n\n确定吗？')){
+    await api('/api/monitors/' + id + '/reset', {method:'POST'});
+    show($('listMsg'), '已重置，下一轮扫描会全量重转（分批进行，不会一次灌满）', true);
+    refresh();
+  }
+}
+function editRow(id){ editing = (editing === id ? null : id); refresh(); }
+async function saveEdit(id){
+  const body = {
+    target_path: $('e_path_' + id).value.trim(),
+    interval_min: parseInt($('e_iv_' + id).value || '60', 10),
+    include_kw: $('e_inc_' + id).value.trim(),
+    exclude_kw: $('e_exc_' + id).value.trim(),
+    min_size_mb: parseInt($('e_min_' + id).value || '0', 10),
+    keep_tree: $('e_kt_' + id).checked,
+  };
+  const r = await api('/api/monitors/' + id, {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if(r.ok){ editing = null; show($('listMsg'), '已保存', true); }
+  else show($('listMsg'), '保存失败：' + (r.msg || ''), false);
+  refresh();
+}
+
+// ---------- 日志 ----------
+async function loadLogs(){
+  const r = await api('/api/logs?n=200' + (logLevelOnly ? '&level=WARN' : ''));
+  const lines = r.logs || [];
+  $('logs').innerHTML = lines.length
+    ? lines.map(l => `<div class="lv-${l.level}">[${esc(l.ts)}] ${l.level.padEnd(5)} ${esc(l.msg)}</div>`).join('')
+    : '<div class="empty">暂无日志</div>';
+  $('logs').scrollTop = $('logs').scrollHeight;
+}
+$('btnLogRefresh').onclick = loadLogs;
+$('btnLogMore').onclick = () => {
+  logLevelOnly = !logLevelOnly;
+  $('btnLogMore').textContent = logLevelOnly ? '看全部' : '只看异常';
+  loadLogs();
+};
+
+refresh();
+loadLogs();
+loadDingtalk();
+loadSmartstrm();
+setInterval(refresh, 30000);
+setInterval(loadLogs, 30000);
+</script>
+</body>
+</html>

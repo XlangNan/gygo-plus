@@ -1,0 +1,19 @@
+services:
+  gygo:
+    build: .
+    container_name: gygo
+    ports:
+      - "5099:5099"
+    volumes:
+      - ./gygo-data:/data          # 监控项、登录态、钉钉配置持久化，别删
+    environment:
+      - TZ=Asia/Shanghai
+      # - GYGO_LOG_LEVEL=DEBUG      # 排障时打开，会打印更细的日志
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import os,urllib.request;urllib.request.urlopen('http://127.0.0.1:'+(os.environ.get('PORT') or '5099')+'/api/health',timeout=4)"]
+      interval: 60s
+      timeout: 8s
+      start_period: 15s
+      retries: 3
