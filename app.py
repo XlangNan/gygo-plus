@@ -18,6 +18,8 @@ import gygo_log
 import monitor
 import monitor_store
 import smartstrm
+import subscription
+import tmdb
 from guangya import ApiError, GuangyaClient, TokenExpired, ROOT_FID
 from share_gy import ShareError, parse_share_input
 
@@ -104,16 +106,25 @@ def act_sms_login(phone, code):
     _persist(c)
     monitor.bind(sys.modules[__name__], _set_expired)
     monitor.start_scheduler()
+    subscription.start_scheduler()
     # 登录成功后，把之前因登录失效暂停的项恢复
     for m in monitor_store.list_all():
         if m.get("status") == "paused":
             monitor_store.update(m["id"], status="ok")
+    for s in monitor_store.list_subscriptions():
+        if s.get("status") == "paused":
+            monitor_store.update_subscription(s["id"], status="ok")
     # 立即扫描待处理的监控项（pending / 还没建基线的），不用等下一个周期
     for m in monitor_store.list_all():
         if not m.get("enabled") or m.get("status") == "invalid":
             continue
         if m.get("status") == "pending" or not m.get("last_files"):
             monitor.scan_now(m["id"])
+    for s in monitor_store.list_subscriptions():
+        if not s.get("enabled") or s.get("status") in ("invalid", "complete"):
+            continue
+        if s.get("links"):
+            subscription.scan_now(s["id"])
     return {"ok": True, "phone": c.phone}
 
 
@@ -253,6 +264,112 @@ def act_smartstrm_test(webhook, tasks, storage_path):
     ok, msg = smartstrm.test((webhook or "").strip(), (tasks or "").strip(),
                              (storage_path or "").strip())
     return {"ok": ok, "msg": msg}
+
+
+def act_tmdb_get():
+    return {"ok": True, "config": tmdb.get_config()}
+
+
+def act_tmdb_save(api_key):
+    cfg = tmdb.save_config(api_key)
+    return {"ok": True, "config": cfg, "msg": "已保存"}
+
+
+def act_tmdb_test(api_key):
+    ok, msg = tmdb.test(api_key)
+    return {"ok": ok, "msg": msg}
+
+
+def act_add_subscription(name, tmdb_id, season, target_path, interval_min,
+                         keep_tree, total_episodes):
+    if not name and not tmdb_id:
+        raise ApiError("请至少填写订阅名称或 TMDB ID")
+    sub, err = subscription.add_subscription(
+        name, tmdb_id, season or None, target_path, interval_min,
+        keep_tree=keep_tree, total_episodes_override=total_episodes or None)
+    r = {"ok": True, "subscription": sub}
+    if err:
+        r["warn"] = "TMDB 查询总集数失败（%s），可以在编辑里手动填总集数" % err
+    return r
+
+
+def act_add_sub_link(sid, share_text, note):
+    if not share_text:
+        raise ApiError("请填写分享链接")
+    sub, dup = subscription.add_link(sid, share_text, note)
+    if not sub:
+        raise ApiError("订阅不存在")
+    if not dup and CLIENT is not None and not AUTH_EXPIRED:
+        subscription.scan_now(sid)
+    return {"ok": True, "subscription": sub, "duplicate": dup}
+
+
+def act_remove_sub_link(sid, lid):
+    sub = monitor_store.remove_sub_link(sid, lid)
+    if not sub:
+        raise ApiError("订阅或链接不存在")
+    return {"ok": True, "subscription": sub}
+
+
+def act_scan_subscription(sid):
+    _need_client()
+    s = monitor_store.get_subscription(sid)
+    if not s:
+        raise ApiError("订阅不存在")
+    sch = subscription._scheduler
+    if sch is None or not sch.is_alive():
+        sch = subscription.start_scheduler()
+    if sid in sch._busy:
+        return {"ok": False, "msg": "该订阅正在扫描中，请稍候再点"}
+    sch._busy.add(sid)
+    try:
+        phases = []
+        result = subscription.scan_subscription(s, on_phase=lambda ph, kw: phases.append(ph))
+    finally:
+        sch._busy.discard(sid)
+    return {"ok": result.get("status") in ("ok", "complete"), "result": result,
+            "phases": phases, "subscription": monitor_store.get_subscription(sid)}
+
+
+SUB_EDITABLE = ("name", "target_path", "interval_min", "keep_tree", "enabled",
+               "total_episodes", "season")
+
+
+def act_update_subscription(sid, patch):
+    s = monitor_store.get_subscription(sid)
+    if not s:
+        raise ApiError("订阅不存在")
+    clean = {}
+    for k in SUB_EDITABLE:
+        if k in patch and patch[k] is not None:
+            clean[k] = patch[k]
+    if "interval_min" in clean:
+        try:
+            clean["interval_min"] = max(monitor_store.MIN_INTERVAL, int(clean["interval_min"]))
+        except (TypeError, ValueError):
+            clean.pop("interval_min")
+    if "total_episodes" in clean:
+        try:
+            clean["total_episodes"] = int(clean["total_episodes"]) or None
+        except (TypeError, ValueError):
+            clean.pop("total_episodes")
+    if "season" in clean:
+        try:
+            clean["season"] = int(clean["season"]) if str(clean["season"]).strip() else None
+        except (TypeError, ValueError):
+            clean.pop("season")
+    if "keep_tree" in clean:
+        clean["keep_tree"] = bool(clean["keep_tree"])
+    if "enabled" in clean:
+        clean["enabled"] = bool(clean["enabled"])
+    monitor_store.update_subscription(sid, **clean)
+    gygo_log.info("修改订阅", id=sid, fields=",".join(clean.keys()))
+    # 手动改了总集数、之前判过"已完结"的，重新判一下要不要恢复追更
+    s2 = monitor_store.get_subscription(sid)
+    if s2.get("status") == "complete" and s2.get("total_episodes"):
+        if len(s2.get("have") or {}) < int(s2["total_episodes"]):
+            monitor_store.update_subscription(sid, status="ok")
+    return {"ok": True, "subscription": monitor_store.get_subscription(sid)}
 
 
 def act_scan(mid):
@@ -458,6 +575,13 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/smartstrm":
             return self._send(200, act_smartstrm_get())
 
+        if path == "/api/tmdb":
+            return self._send(200, act_tmdb_get())
+
+        if path == "/api/subscriptions":
+            return self._send(200, {"ok": True,
+                                    "subscriptions": monitor_store.list_subscriptions()})
+
         if path == "/api/dirs":
             q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             fid = (q.get("fid") or [""])[0]
@@ -503,6 +627,56 @@ class Handler(BaseHTTPRequestHandler):
                 r = act_smartstrm_test(data.get("webhook"), data.get("tasks"),
                                        data.get("storage_path"))
                 return self._send(200, r)
+
+            if path == "/api/tmdb":
+                r = act_tmdb_save(data.get("api_key"))
+                return self._send(200, r)
+
+            if path == "/api/tmdb/test":
+                r = act_tmdb_test(data.get("api_key"))
+                return self._send(200, r)
+
+            if path == "/api/subscriptions":
+                r = act_add_subscription(
+                    (data.get("name") or "").strip(),
+                    (data.get("tmdb_id") or "").strip(),
+                    data.get("season"),
+                    (data.get("target_path") or "").strip(),
+                    int(data.get("interval_min") or monitor_store.MIN_INTERVAL),
+                    data.get("keep_tree", True),
+                    data.get("total_episodes"),
+                )
+                return self._send(200, r)
+
+            if path.startswith("/api/subscriptions/") and path.endswith("/scan"):
+                sid = int(path.split("/")[3])
+                return self._send(200, act_scan_subscription(sid))
+
+            if path.startswith("/api/subscriptions/") and path.endswith("/toggle"):
+                sid = int(path.split("/")[3])
+                s = monitor_store.get_subscription(sid)
+                if not s:
+                    return self._send(404, {"ok": False, "msg": "订阅不存在"})
+                monitor_store.update_subscription(sid, enabled=not s.get("enabled", True))
+                return self._send(200, {"ok": True,
+                                        "subscription": monitor_store.get_subscription(sid)})
+
+            if path.startswith("/api/subscriptions/") and path.endswith("/links"):
+                sid = int(path.split("/")[3])
+                r = act_add_sub_link(sid, (data.get("share_url") or "").strip(),
+                                     (data.get("note") or "").strip())
+                return self._send(200, r)
+
+            # 编辑订阅：/api/subscriptions/{id}（只认三段，多的当未知路由）
+            if path.startswith("/api/subscriptions/"):
+                parts = path.strip("/").split("/")
+                if len(parts) != 3:
+                    return self._send(404, {"ok": False, "msg": "not found"})
+                try:
+                    sid = int(parts[2])
+                except ValueError:
+                    return self._send(400, {"ok": False, "msg": "参数错误"})
+                return self._send(200, act_update_subscription(sid, data))
 
             if path == "/api/monitors":
                 r = act_add_monitor(
@@ -577,6 +751,20 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"ok": False, "msg": "参数错误"})
             ok = monitor_store.remove(mid)
             return self._send(200, {"ok": ok})
+        if path.startswith("/api/subscriptions/"):
+            parts = path.strip("/").split("/")
+            try:
+                if len(parts) == 5 and parts[3] == "links":
+                    sid, lid = int(parts[2]), int(parts[4])
+                    return self._send(200, act_remove_sub_link(sid, lid))
+                if len(parts) == 3:
+                    sid = int(parts[2])
+                    ok = monitor_store.remove_subscription(sid)
+                    return self._send(200, {"ok": ok})
+            except (IndexError, ValueError):
+                return self._send(400, {"ok": False, "msg": "参数错误"})
+            except ApiError as e:
+                return self._send(200, {"ok": False, "msg": str(e)})
         return self._send(404, {"ok": False, "msg": "not found"})
 
 
@@ -587,6 +775,7 @@ def main():
         AUTH_EXPIRED = False
     monitor.bind(sys.modules[__name__], _set_expired)
     monitor.start_scheduler()
+    subscription.start_scheduler()
 
     srv = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
 

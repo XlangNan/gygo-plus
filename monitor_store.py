@@ -24,7 +24,8 @@ def _now():
 
 
 def _empty():
-    return {"monitors": [], "auth": {}, "dingtalk": {}, "smartstrm": {}, "seq": 0}
+    return {"monitors": [], "subscriptions": [], "auth": {}, "dingtalk": {},
+            "smartstrm": {}, "tmdb": {}, "seq": 0}
 
 
 def _load():
@@ -38,9 +39,11 @@ def _load():
     if not isinstance(data, dict):
         return _empty()
     data.setdefault("monitors", [])
+    data.setdefault("subscriptions", [])
     data.setdefault("auth", {})
     data.setdefault("dingtalk", {})
     data.setdefault("smartstrm", {})
+    data.setdefault("tmdb", {})
     data.setdefault("seq", 0)
     return data
 
@@ -160,3 +163,116 @@ def save_smartstrm(**fields):
         data["smartstrm"]["updated_at"] = _now()
         _save(data)
         return dict(data["smartstrm"])
+
+
+# ------------------------------------------------------------------ TMDB 配置
+
+def load_tmdb():
+    with _lock:
+        return dict(_load()["tmdb"])
+
+
+def save_tmdb(**fields):
+    with _lock:
+        data = _load()
+        data["tmdb"].update(fields)
+        data["tmdb"]["updated_at"] = _now()
+        _save(data)
+        return dict(data["tmdb"])
+
+
+# ------------------------------------------------------------------ 订阅追更
+# 一个订阅 = 一部剧（可选绑定 TMDB ID 查总集数）+ 多个分享链接。
+# 以「集数」为基线（have: {"3": {...}}），不是以单条分享的 fid 集合为基线，
+# 所以同一集不管从哪条链接来的都只会转一次。
+
+def list_subscriptions():
+    with _lock:
+        return list(_load()["subscriptions"])
+
+
+def get_subscription(sid):
+    with _lock:
+        for s in _load()["subscriptions"]:
+            if s.get("id") == sid:
+                return s
+    return None
+
+
+def add_subscription(fields):
+    with _lock:
+        data = _load()
+        data["seq"] += 1
+        item = {
+            "id": data["seq"],
+            "name": "",
+            "tmdb_id": "",
+            "season": None,           # None = 不分季，按整部剧的总集数
+            "total_episodes": None,   # None = 未知，不判断"缺了哪几集"，来什么转什么
+            "target_path": "",
+            "keep_tree": True,
+            "interval_min": MIN_INTERVAL,
+            "enabled": True,
+            "status": "pending",      # pending/ok/error/paused/complete
+            "links": [],              # [{id, share_url, share_id, passcode, pdir_fid,
+                                       #   link_name, note, status, last_result}]
+            "link_seq": 0,
+            "have": {},                # {"集数": {"fid","name","link_id"}}
+            "dir_fids": {},
+            "last_scan": "",
+            "last_result": "",
+            "added_at": _now(),
+        }
+        item.update(fields or {})
+        item["interval_min"] = max(MIN_INTERVAL, int(item.get("interval_min") or MIN_INTERVAL))
+        data["subscriptions"].append(item)
+        _save(data)
+        return dict(item)
+
+
+def update_subscription(sid, **fields):
+    with _lock:
+        data = _load()
+        for s in data["subscriptions"]:
+            if s.get("id") == sid:
+                s.update(fields)
+                _save(data)
+                return dict(s)
+    return None
+
+
+def remove_subscription(sid):
+    with _lock:
+        data = _load()
+        before = len(data["subscriptions"])
+        data["subscriptions"] = [s for s in data["subscriptions"] if s.get("id") != sid]
+        _save(data)
+        return len(data["subscriptions"]) < before
+
+
+def add_sub_link(sid, share_url, share_id, passcode, pdir_fid, note=""):
+    with _lock:
+        data = _load()
+        for s in data["subscriptions"]:
+            if s.get("id") == sid:
+                s["link_seq"] = s.get("link_seq", 0) + 1
+                link = {"id": s["link_seq"], "share_url": share_url, "share_id": share_id,
+                        "passcode": passcode, "pdir_fid": pdir_fid, "link_name": "",
+                        "note": note, "status": "pending", "last_result": "",
+                        "added_at": _now()}
+                s.setdefault("links", []).append(link)
+                _save(data)
+                return dict(s)
+    return None
+
+
+def remove_sub_link(sid, lid):
+    with _lock:
+        data = _load()
+        for s in data["subscriptions"]:
+            if s.get("id") == sid:
+                before = len(s.get("links") or [])
+                s["links"] = [l for l in (s.get("links") or []) if l.get("id") != lid]
+                _save(data)
+                return dict(s) if len(s["links"]) < before else None
+    return None

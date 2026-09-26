@@ -6,19 +6,57 @@
 <title>gygo · 光鸭分享追更</title>
 <style>
   :root{--bg:#0f1115;--card:#171a21;--line:#262b36;--fg:#e6e8ee;--dim:#8b93a7;
-        --ok:#3ecf8e;--err:#ff6b6b;--warn:#ffb454;--acc:#5b8cff}
+        --ok:#3ecf8e;--err:#ff6b6b;--warn:#ffb454;--acc:#5b8cff;
+        --input-bg:#0d0f14;--logs-bg:#0b0d11;--banner-bg:#3a1d1d;--banner-fg:#ffbcbc;
+        --hover-bg:#1e222b;--editrow-bg:#12151c}
+  :root[data-theme="light"]{
+    --bg:#f2f3f6;--card:#ffffff;--line:#e2e5ec;--fg:#191c22;--dim:#68707e;
+    --ok:#15915c;--err:#d6453f;--warn:#b5690d;--acc:#3b66d6;
+    --input-bg:#f5f6f9;--logs-bg:#f5f6f9;--banner-bg:#fdeaea;--banner-fg:#8a2323;
+    --hover-bg:#eef0f4;--editrow-bg:#f3f5f9}
   *{box-sizing:border-box}
-  body{margin:0;padding:24px;background:var(--bg);color:var(--fg);
+  body{margin:0;padding:0;background:var(--bg);color:var(--fg);
        font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
   h1{font-size:20px;margin:0 0 4px}
   h1 small{color:var(--dim);font-size:12px;font-weight:400;margin-left:8px}
   .sub{color:var(--dim);font-size:13px;margin-bottom:20px}
+  .shell{display:flex;min-height:100vh}
+  .sidebar{width:220px;flex:0 0 220px;background:var(--card);border-right:1px solid var(--line);
+    padding:16px 10px;display:flex;flex-direction:column;gap:3px;position:sticky;top:0;
+    height:100vh;overflow-y:auto}
+  .side-top{display:flex;align-items:center;justify-content:space-between;
+    padding:0 6px 14px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .brand{font-size:16px;font-weight:600}
+  .brand small{color:var(--dim);font-size:11px;font-weight:400;margin-left:6px}
+  .theme-btn{background:transparent;border:1px solid var(--line);border-radius:8px;
+    padding:5px 9px;cursor:pointer;font-size:14px;color:var(--fg)}
+  .theme-btn:hover{border-color:var(--dim)}
+  .side-status{padding:8px 10px;margin:0 0 10px;font-size:12px;color:var(--dim);
+    border-radius:8px;background:var(--bg)}
+  .side-status.logged{color:var(--ok)}
+  .nav-item{display:flex;align-items:center;width:100%;text-align:left;background:transparent;
+    border:0;color:var(--fg);padding:10px 12px;border-radius:8px;font-size:13.5px;
+    cursor:pointer;font-family:inherit;gap:8px}
+  .nav-item:hover{background:var(--hover-bg)}
+  .nav-item.active{background:var(--acc);color:#fff}
+  .main{flex:1;min-width:0;padding:24px}
+  .view{display:none}
+  .view.active{display:block}
+  @media (max-width:760px){
+    .shell{flex-direction:column}
+    .sidebar{width:100%;flex:0 0 auto;height:auto;position:static;
+      flex-direction:row;overflow-x:auto;padding:10px}
+    .side-top{border-bottom:0;margin-bottom:0;padding:0 6px 0 0}
+    .side-status{display:none}
+    .nav-item{white-space:nowrap;flex:0 0 auto}
+    .main{padding:16px}
+  }
   .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
         padding:18px;margin-bottom:16px}
   .card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
   .card h2 .sp{flex:1}
   label{display:block;font-size:13px;color:var(--dim);margin:12px 0 5px}
-  input,textarea,select{width:100%;background:#0d0f14;border:1px solid var(--line);
+  input,textarea,select{width:100%;background:var(--input-bg);border:1px solid var(--line);
     color:var(--fg);border-radius:7px;padding:9px 11px;font-size:14px;font-family:inherit}
   textarea{min-height:78px;resize:vertical}
   input:focus,textarea:focus{outline:none;border-color:var(--acc)}
@@ -32,13 +70,13 @@
   button.ghost:hover{color:var(--fg);border-color:var(--dim)}
   button.danger{background:transparent;border:1px solid rgba(255,107,107,.4);color:var(--err)}
   button.tiny{padding:5px 10px;font-size:12px}
-  .banner{background:#3a1d1d;border:1px solid var(--err);color:#ffbcbc;
+  .banner{background:var(--banner-bg);border:1px solid var(--err);color:var(--banner-fg);
     padding:11px 14px;border-radius:8px;margin-bottom:16px;display:none}
   .banner.show{display:block}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th{text-align:left;color:var(--dim);font-weight:500;padding:8px 10px;
      border-bottom:1px solid var(--line);white-space:nowrap}
-  td{padding:10px;border-bottom:1px solid #1e222b;vertical-align:top}
+  td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
   td.path{color:var(--dim);font-size:12px;word-break:break-all;max-width:260px}
   .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;white-space:nowrap}
   .t-ok{background:rgba(62,207,142,.14);color:var(--ok)}
@@ -46,6 +84,7 @@
   .t-invalid{background:rgba(255,107,107,.22);color:var(--err)}
   .t-paused{background:rgba(255,180,84,.14);color:var(--warn)}
   .t-pending{background:rgba(139,147,167,.14);color:var(--dim)}
+  .t-complete{background:rgba(91,140,255,.16);color:var(--acc)}
   .msg{margin-top:12px;font-size:13px;display:none;padding:9px 12px;border-radius:7px;
        white-space:pre-wrap;word-break:break-all}
   .msg.ok{display:block;background:rgba(62,207,142,.1);color:var(--ok)}
@@ -57,10 +96,10 @@
   details{margin-top:12px}
   summary{cursor:pointer;color:var(--dim);font-size:13px;user-select:none}
   summary:hover{color:var(--fg)}
-  .adv{background:#0d0f14;border:1px solid var(--line);border-radius:8px;padding:12px 14px 4px;margin-top:8px}
+  .adv{background:var(--input-bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px 4px;margin-top:8px}
   .check{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:13px;margin:8px 0}
   .check input{width:auto;margin:0}
-  #logs{background:#0b0d11;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  #logs{background:var(--logs-bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
         font:12px/1.7 ui-monospace,Menlo,Consolas,monospace;max-height:320px;overflow:auto;
         white-space:pre-wrap;word-break:break-all;color:var(--dim)}
   #logs .lv-ERROR{color:var(--err)} #logs .lv-WARN{color:var(--warn)} #logs .lv-INFO{color:#a8b0c0}
@@ -74,40 +113,57 @@
   .modal .bd{padding:12px 16px;overflow:auto;flex:1}
   .modal .ft{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
   .diritem{padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;gap:8px;align-items:center}
-  .diritem:hover{background:#1e222b}
-  .editrow td{background:#12151c}
+  .diritem:hover{background:var(--hover-bg)}
+  .editrow td{background:var(--editrow-bg)}
 </style>
 </head>
 <body>
-<h1>gygo · 光鸭分享追更 <small id="ver"></small></h1>
-<div class="sub">粘贴光鸭分享链接 → 自动定时检查 → 出新集就自动转存到你的光鸭云盘</div>
-
-<div class="banner" id="expireBanner">
-  登录已失效，请重新登录。重新登录后监控会自动恢复。
-</div>
-
-<!-- 登录 -->
-<div class="card">
-  <h2>🔐 登录光鸭云盘</h2>
-  <div id="loginBox">
-    <div class="row">
-      <div><label>手机号</label><input id="phone" placeholder="13800138000" autocomplete="off"></div>
-      <div style="flex:0 0 auto"><button id="btnSend">发送验证码</button></div>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="side-top">
+      <div class="brand">gygo <small id="ver"></small></div>
+      <button class="theme-btn" id="themeToggle" title="切换亮色/暗色">🌙</button>
     </div>
-    <div class="row">
-      <div><label>短信验证码</label><input id="code" placeholder="6 位数字" autocomplete="off"></div>
-      <div style="flex:0 0 auto"><button id="btnLogin">登录</button></div>
-    </div>
-  </div>
-  <div id="loggedBox" style="display:none">
-    <div style="color:var(--ok);margin-bottom:10px">已登录：<b id="who"></b></div>
-    <button class="ghost" id="btnLogout">退出登录</button>
-  </div>
-  <div class="msg" id="loginMsg"></div>
-</div>
+    <div class="side-status" id="sideStatus">检查登录状态…</div>
+    <button class="nav-item" data-view="monitors">📡 分享监控</button>
+    <button class="nav-item" data-view="subscriptions">📺 订阅追更</button>
+    <button class="nav-item" data-view="dingtalk">🔔 钉钉通知</button>
+    <button class="nav-item" data-view="smartstrm">🎬 SmartStrm 联动</button>
+    <button class="nav-item" data-view="tmdb">🎯 TMDB 设置</button>
+    <button class="nav-item" data-view="account">🔐 账号登录</button>
+    <button class="nav-item" data-view="logs">📜 运行日志</button>
+  </nav>
 
-<!-- 钉钉机器人通知 -->
-<div class="card">
+  <main class="main">
+    <div class="banner" id="expireBanner">
+      登录已失效，请重新登录。重新登录后监控会自动恢复。
+    </div>
+
+    <section class="view" id="view-account">
+    <!-- 登录 -->
+    <div class="card">
+      <h2>🔐 登录光鸭云盘</h2>
+      <div id="loginBox">
+        <div class="row">
+          <div><label>手机号</label><input id="phone" placeholder="13800138000" autocomplete="off"></div>
+          <div style="flex:0 0 auto"><button id="btnSend">发送验证码</button></div>
+        </div>
+        <div class="row">
+          <div><label>短信验证码</label><input id="code" placeholder="6 位数字" autocomplete="off"></div>
+          <div style="flex:0 0 auto"><button id="btnLogin">登录</button></div>
+        </div>
+      </div>
+      <div id="loggedBox" style="display:none">
+        <div style="color:var(--ok);margin-bottom:10px">已登录：<b id="who"></b></div>
+        <button class="ghost" id="btnLogout">退出登录</button>
+      </div>
+      <div class="msg" id="loginMsg"></div>
+    </div>
+    </section>
+
+    <section class="view" id="view-dingtalk">
+    <!-- 钉钉机器人通知 -->
+    <div class="card">
   <h2>🔔 钉钉机器人通知</h2>
   <div class="hint" style="margin-top:0">
     在钉钉群里加一个「自定义机器人」，把 Webhook 地址（和可选的加签密钥）填在这里保存即可，
@@ -127,9 +183,11 @@
   </div>
   <div class="msg" id="dtMsg"></div>
 </div>
+    </section>
 
-<!-- 联动 SmartStrm -->
-<div class="card">
+    <section class="view" id="view-smartstrm">
+    <!-- 联动 SmartStrm -->
+    <div class="card">
   <h2>🎬 联动 SmartStrm</h2>
   <div class="hint" style="margin-top:0">
     转存成功后自动 POST 到 SmartStrm 的 Webhook，触发它立即执行指定任务生成/更新 STRM，
@@ -153,9 +211,73 @@
   </div>
   <div class="msg" id="ssMsg"></div>
 </div>
+    </section>
 
-<!-- 添加监控 -->
+    <section class="view" id="view-tmdb">
+    <!-- TMDB 设置 -->
+    <div class="card">
+  <h2>🎯 TMDB 设置</h2>
+  <div class="hint" style="margin-top:0">
+    用于「订阅追更」自动查一部剧的总集数。免费申请：<a href="https://www.themoviedb.org/settings/api" target="_blank" style="color:var(--acc)">themoviedb.org/settings/api</a>，
+    选 "API Key (v3 auth)" 那个。不填也能用订阅功能，只是总集数要自己手动填。
+  </div>
+  <label>TMDB API Key</label>
+  <input id="tmdbKey" placeholder="32位字符串" autocomplete="off">
+  <div style="margin-top:14px;display:flex;gap:8px">
+    <button id="btnTmdbSave">保存配置</button>
+    <button class="ghost" id="btnTmdbTest">测试连通</button>
+  </div>
+  <div class="msg" id="tmdbMsg"></div>
+</div>
+    </section>
+
+    <section class="view" id="view-subscriptions">
+    <!-- 订阅追更 -->
+    <div class="card">
+  <h2>📺 订阅追更</h2>
+  <div class="hint" style="margin-top:0">
+    适合"同一部剧有好几个人分享、且经常有人分享不全"的场景：建一个订阅、按 TMDB 查总集数（或手填），
+    下面挂几条不同人的分享链接，gygo 会依次检查每条链接，把缺的集数转存过来，同一集不管从哪条链接
+    来的都只转一次，集数收齐就自动停止扫描。
+  </div>
+  <div class="row">
+    <div><label>名称（留空且填了 TMDB ID 会自动用剧名）</label>
+      <input id="subName" placeholder="剧名"></div>
+    <div style="flex:0 0 160px"><label>TMDB ID（可选）</label>
+      <input id="subTmdbId" placeholder="如 94605"></div>
+    <div style="flex:0 0 100px"><label>季（可选）</label>
+      <input id="subSeason" type="number" min="1" placeholder="不分季"></div>
+  </div>
+  <div class="row">
+    <div><label>转存到我的目录（留空=根目录）</label>
+      <input id="subTargetPath" placeholder="影视/剧名"></div>
+    <div style="flex:0 0 auto"><button class="ghost" id="btnSubBrowse">浏览…</button></div>
+    <div style="flex:0 0 150px"><label>扫描间隔（分钟）</label>
+      <input id="subInterval" type="number" value="60" min="60"></div>
+  </div>
+  <div class="row">
+    <div style="flex:0 0 200px"><label>总集数（没配 TMDB Key 时手动填，留空=不判断缺集，来什么转什么）</label>
+      <input id="subTotal" type="number" min="1" placeholder="留空=自动查/不限"></div>
+    <div style="flex:1 0 auto;padding-top:30px">
+      <label class="check"><input type="checkbox" id="subKeepTree" checked>
+        保持分享里的子目录结构</label>
+    </div>
+  </div>
+  <div style="margin-top:14px"><button id="btnSubAdd">＋ 新建订阅</button></div>
+  <div class="msg" id="subAddMsg"></div>
+</div>
+
+<!-- 订阅列表 -->
 <div class="card">
+  <h2>📋 订阅列表</h2>
+  <div class="msg" id="subListMsg"></div>
+  <div id="subListWrap"><div class="empty">还没有订阅</div></div>
+</div>
+    </section>
+
+    <section class="view" id="view-monitors">
+    <!-- 添加监控 -->
+    <div class="card">
   <h2>➕ 添加追更监控</h2>
   <label>光鸭分享链接（可整段粘贴，提取码会自动识别）</label>
   <textarea id="shareUrl" placeholder="https://www.guangyapan.com/s/xxxxxx 提取码：abcd"></textarea>
@@ -204,15 +326,21 @@
   <div class="msg" id="listMsg"></div>
   <div id="listWrap"><div class="empty">还没有监控项</div></div>
 </div>
+    </section>
 
-<!-- 日志 -->
-<div class="card">
+    <section class="view" id="view-logs">
+    <!-- 日志 -->
+    <div class="card">
   <h2>📜 运行日志 <span class="sp"></span>
     <button class="ghost tiny" id="btnLogRefresh">刷新</button>
     <button class="ghost tiny" id="btnLogMore">只看异常</button>
   </h2>
   <div id="logs">加载中…</div>
   <div class="hint">同时写入容器里的 <code>/data/gygo.log</code>，超过 1MB 自动轮转。</div>
+</div>
+    </section>
+
+  </main>
 </div>
 
 <!-- 目录选择弹窗 -->
@@ -231,6 +359,35 @@
 <script>
 const $ = id => document.getElementById(id);
 let logLevelOnly = false;
+
+// ---------- 主题（亮/暗） ----------
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  $('themeToggle').textContent = t === 'light' ? '🌙' : '☀️';
+  $('themeToggle').title = t === 'light' ? '切换到暗色' : '切换到亮色';
+  try{ localStorage.setItem('gygo_theme', t); }catch(e){}
+}
+$('themeToggle').onclick = () => {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(cur === 'light' ? 'dark' : 'light');
+};
+let _savedTheme = 'dark';
+try{ _savedTheme = localStorage.getItem('gygo_theme') || 'dark'; }catch(e){}
+applyTheme(_savedTheme);
+
+// ---------- 左侧导航切换 ----------
+function switchView(view){
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
+  try{ localStorage.setItem('gygo_view', view); }catch(e){}
+}
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.onclick = () => switchView(btn.dataset.view);
+});
+let _savedView = 'monitors';
+try{ _savedView = localStorage.getItem('gygo_view') || 'monitors'; }catch(e){}
+if(![...document.querySelectorAll('.nav-item')].some(b => b.dataset.view === _savedView)) _savedView = 'monitors';
+switchView(_savedView);
 
 function show(el, msg, ok){
   el.className = 'msg ' + (ok ? 'ok' : 'err');
@@ -337,13 +494,237 @@ $('btnSsTest').onclick = async () => {
   show($('ssMsg'), r.msg || (r.ok ? '触发成功' : '触发失败'), r.ok);
 };
 
+// ---------- TMDB ----------
+async function loadTmdb(){
+  const r = await api('/api/tmdb');
+  if(!r.ok) return;
+  $('tmdbKey').value = (r.config || {}).api_key || '';
+}
+$('btnTmdbSave').onclick = async () => {
+  $('btnTmdbSave').disabled = true; $('btnTmdbSave').textContent = '保存中…';
+  const r = await api('/api/tmdb', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({api_key: $('tmdbKey').value.trim()})});
+  $('btnTmdbSave').disabled = false; $('btnTmdbSave').textContent = '保存配置';
+  show($('tmdbMsg'), r.msg || (r.ok ? '已保存' : '保存失败'), r.ok);
+};
+$('btnTmdbTest').onclick = async () => {
+  const api_key = $('tmdbKey').value.trim();
+  if(!api_key) return show($('tmdbMsg'), '请先填写 API Key', false);
+  $('btnTmdbTest').disabled = true; $('btnTmdbTest').textContent = '测试中…';
+  const r = await api('/api/tmdb/test', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify({api_key})});
+  $('btnTmdbTest').disabled = false; $('btnTmdbTest').textContent = '测试连通';
+  show($('tmdbMsg'), r.msg || (r.ok ? '连通成功' : '连通失败'), r.ok);
+};
+
+// ---------- 订阅追更 ----------
+$('btnSubAdd').onclick = async () => {
+  const name = $('subName').value.trim();
+  const tmdb_id = $('subTmdbId').value.trim();
+  if(!name && !tmdb_id) return show($('subAddMsg'), '名称和 TMDB ID 至少填一个', false);
+  $('btnSubAdd').disabled = true; $('btnSubAdd').textContent = '创建中…';
+  const r = await api('/api/subscriptions', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      name, tmdb_id,
+      season: $('subSeason').value.trim(),
+      target_path: $('subTargetPath').value.trim(),
+      interval_min: parseInt($('subInterval').value || '60', 10),
+      keep_tree: $('subKeepTree').checked,
+      total_episodes: $('subTotal').value.trim()})});
+  $('btnSubAdd').disabled = false; $('btnSubAdd').textContent = '＋ 新建订阅';
+  const msg = r.warn ? (r.warn) : (r.msg || (r.ok ? '已创建，接下来给它加分享链接' : '创建失败'));
+  show($('subAddMsg'), msg, r.ok);
+  if(r.ok){
+    $('subName').value=''; $('subTmdbId').value=''; $('subSeason').value='';
+    $('subTargetPath').value=''; $('subTotal').value='';
+    subExpanded.add(r.subscription.id);
+    refreshSubs();
+  }
+};
+
+function compressRanges(nums){
+  const arr = [...nums].sort((a,b)=>a-b);
+  if(!arr.length) return '';
+  const out = [];
+  let start = arr[0], prev = arr[0];
+  for(let i=1;i<arr.length;i++){
+    if(arr[i] === prev + 1){ prev = arr[i]; continue; }
+    out.push(start===prev ? ''+start : start+'-'+prev);
+    start = prev = arr[i];
+  }
+  out.push(start===prev ? ''+start : start+'-'+prev);
+  return out.join(',');
+}
+
+let subExpanded = new Set();
+let subEditing = null;
+
+async function refreshSubs(){
+  const d = await api('/api/subscriptions');
+  const items = d.subscriptions || [];
+  if(!items.length){
+    $('subListWrap').innerHTML = '<div class="empty">还没有订阅</div>';
+    return;
+  }
+  const statusLabel = {ok:'追更中', error:'出错', invalid:'链接失效', paused:'已暂停',
+                       pending:'待扫描', complete:'已集齐'};
+  let html = '';
+  for(const s of items){
+    const tag = 't-' + (s.status || 'pending');
+    const label = statusLabel[s.status] || s.status;
+    const haveNums = Object.keys(s.have||{}).map(Number);
+    let progress;
+    if(s.total_episodes){
+      const missing = [];
+      for(let i=1;i<=s.total_episodes;i++) if(!haveNums.includes(i)) missing.push(i);
+      progress = `已收集 ${haveNums.length}/${s.total_episodes} 集`
+        + (missing.length ? `，缺 ${compressRanges(missing)}` : '');
+    } else {
+      progress = `已收集 ${haveNums.length} 集（未设总集数）`;
+    }
+    const expanded = subExpanded.has(s.id);
+    html += `<div class="card" style="margin-bottom:10px;padding:14px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <b>${esc(s.name)}</b>
+        <span class="tag ${tag}">${label}</span>
+        ${s.enabled?'':'<span class="tag t-pending">已停用</span>'}
+        <span style="color:var(--dim);font-size:12px">${esc(progress)}</span>
+        <span style="flex:1"></span>
+        <div class="acts">
+          <button class="ghost" onclick="scanSubNow(${s.id}, this)">立即扫描</button>
+          <button class="ghost" onclick="toggleSub(${s.id})">${s.enabled?'停用':'启用'}</button>
+          <button class="ghost" onclick="toggleExpand(${s.id})">${expanded?'收起':'管理链接'}</button>
+          <button class="ghost" onclick="editSub(${s.id})">编辑</button>
+          <button class="danger" onclick="delSub(${s.id})">删除</button>
+        </div>
+      </div>
+      <div style="color:var(--dim);font-size:12px;margin-top:6px">
+        转存到 ${esc(s.target_path || '/（根目录）')}
+        ${s.tmdb_id?(' · TMDB #' + esc(s.tmdb_id) + (s.season?(' 第'+s.season+'季'):'')):''}
+        · 每 ${s.interval_min} 分钟 · ${s.last_scan || '还没扫描过'}
+      </div>
+      ${s.last_result?`<div style="color:var(--dim);font-size:12px;margin-top:2px">${esc(s.last_result)}</div>`:''}`;
+
+    if(subEditing === s.id){
+      html += `<div class="adv" style="margin-top:10px">
+        <div class="row">
+          <div><label>名称</label><input id="se_name_${s.id}" value="${esc(s.name||'')}"></div>
+          <div style="flex:0 0 150px"><label>总集数</label>
+            <input id="se_total_${s.id}" type="number" min="1" value="${s.total_episodes||''}"></div>
+        </div>
+        <div class="row">
+          <div><label>转存目录</label><input id="se_path_${s.id}" value="${esc(s.target_path||'')}"></div>
+          <div style="flex:0 0 150px"><label>间隔(分钟)</label>
+            <input id="se_iv_${s.id}" type="number" value="${s.interval_min}" min="60"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="se_kt_${s.id}" ${s.keep_tree!==false?'checked':''}>
+          保持分享里的子目录结构</label>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="saveSubEdit(${s.id})">保存</button>
+          <button class="ghost" onclick="subEditing=null;refreshSubs()">取消</button>
+        </div>
+      </div>`;
+    }
+
+    if(expanded){
+      html += `<div class="adv" style="margin-top:10px">
+        <div style="font-size:13px;color:var(--dim);margin-bottom:6px">分享链接（依次检查，缺哪集从哪条链接补）</div>`;
+      const links = s.links || [];
+      if(!links.length){
+        html += '<div class="empty" style="padding:14px">还没加链接</div>';
+      } else {
+        const lstatusLabel = {ok:'正常', error:'出错', invalid:'失效', pending:'待扫描'};
+        for(const l of links){
+          const ltag = 't-' + (l.status || 'pending');
+          html += `<div class="sublink" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="tag ${ltag}">${lstatusLabel[l.status]||l.status}</span>
+            <span>${esc(l.note || l.link_name || '（未命名来源）')}</span>
+            <span style="color:var(--dim);font-size:12px;flex:1">${esc((l.share_url||'').slice(0,50))}${(l.share_url||'').length>50?'…':''}</span>
+            <button class="ghost tiny" onclick="delSubLink(${s.id}, ${l.id})">删除</button>
+          </div>
+          ${l.last_result?`<div style="color:var(--dim);font-size:11px;margin:2px 0 6px 4px">${esc(l.last_result)}</div>`:''}`;
+        }
+      }
+      html += `<div class="row" style="margin-top:10px">
+          <div><label>加一条分享链接</label>
+            <textarea id="sl_url_${s.id}" placeholder="https://www.guangyapan.com/s/xxxxxx 提取码：abcd"></textarea></div>
+        </div>
+        <div class="row">
+          <div><label>备注（谁分享的，可选）</label><input id="sl_note_${s.id}" placeholder="比如：B站up主xxx"></div>
+          <div style="flex:0 0 auto;padding-top:22px"><button onclick="addSubLink(${s.id})">＋ 添加链接</button></div>
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  $('subListWrap').innerHTML = html;
+}
+
+async function scanSubNow(id, btn){
+  btn.disabled = true; btn.textContent = '扫描中…';
+  const r = await api('/api/subscriptions/' + id + '/scan', {method:'POST'});
+  btn.disabled = false; btn.textContent = '立即扫描';
+  const res = r.result || {};
+  const txt = r.ok
+    ? ('✅ ' + (res.status === 'complete' ? '已集齐！' : ('本轮新增 ' + (res.added||0) + ' 集')))
+    : ('❌ ' + (r.msg || res.msg || '未知错误'));
+  show($('subListMsg'), txt, r.ok);
+  refreshSubs();
+}
+async function toggleSub(id){ await api('/api/subscriptions/' + id + '/toggle', {method:'POST'}); refreshSubs(); }
+function toggleExpand(id){
+  if(subExpanded.has(id)) subExpanded.delete(id); else subExpanded.add(id);
+  refreshSubs();
+}
+function editSub(id){ subEditing = (subEditing === id ? null : id); refreshSubs(); }
+async function saveSubEdit(id){
+  const body = {
+    name: $('se_name_' + id).value.trim(),
+    total_episodes: $('se_total_' + id).value.trim(),
+    target_path: $('se_path_' + id).value.trim(),
+    interval_min: parseInt($('se_iv_' + id).value || '60', 10),
+    keep_tree: $('se_kt_' + id).checked,
+  };
+  const r = await api('/api/subscriptions/' + id, {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if(r.ok){ subEditing = null; show($('subListMsg'), '已保存', true); }
+  else show($('subListMsg'), '保存失败：' + (r.msg || ''), false);
+  refreshSubs();
+}
+async function delSub(id){
+  if(confirm('确定删除这个订阅？\n（只是不再追更，已经转存的文件不受影响）')){
+    await api('/api/subscriptions/' + id, {method:'DELETE'});
+    subExpanded.delete(id);
+    refreshSubs();
+  }
+}
+async function addSubLink(id){
+  const share_url = $('sl_url_' + id).value.trim();
+  if(!share_url) return show($('subListMsg'), '请粘贴分享链接', false);
+  const note = $('sl_note_' + id).value.trim();
+  const r = await api('/api/subscriptions/' + id + '/links', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify({share_url, note})});
+  show($('subListMsg'), r.duplicate ? '这条链接已经加过了' : (r.msg || (r.ok?'已添加，后台扫描中…':'添加失败')), r.ok);
+  if(r.ok){ $('sl_url_' + id).value=''; $('sl_note_' + id).value=''; refreshSubs(); }
+}
+async function delSubLink(id, lid){
+  if(confirm('确定删除这条分享链接？（已转存的文件不受影响）')){
+    await api('/api/subscriptions/' + id + '/links/' + lid, {method:'DELETE'});
+    refreshSubs();
+  }
+}
+
 // ---------- 目录浏览 ----------
 let dirStack = [];   // [{fid, name}]
-$('btnBrowse').onclick = () => { dirStack = []; openDir(''); };
+let dirTarget = 'targetPath';   // 当前"浏览…"按钮要写回哪个输入框
+$('btnBrowse').onclick = () => { dirTarget = 'targetPath'; dirStack = []; openDir(''); };
+$('btnSubBrowse').onclick = () => { dirTarget = 'subTargetPath'; dirStack = []; openDir(''); };
 $('dirCancel').onclick = () => $('dirModal').classList.remove('show');
 $('dirUp').onclick = () => { if(dirStack.length){ dirStack.pop(); openDir(currentFid()); } };
 $('dirPick').onclick = () => {
-  $('targetPath').value = dirStack.map(x => x.name).join('/');
+  $(dirTarget).value = dirStack.map(x => x.name).join('/');
   $('dirModal').classList.remove('show');
 };
 function currentFid(){ return dirStack.length ? dirStack[dirStack.length-1].fid : ''; }
@@ -396,6 +777,8 @@ async function refresh(){
   $('loggedBox').style.display = logged ? 'block' : 'none';
   $('expireBanner').className = 'banner' + (s.expired ? ' show' : '');
   if(logged) $('who').textContent = s.phone || '已登录';
+  $('sideStatus').textContent = s.expired ? '⚠️ 登录已失效' : (logged ? ('已登录 ' + (s.phone || '')) : '未登录');
+  $('sideStatus').className = 'side-status' + (logged && !s.expired ? ' logged' : '');
 
   const d = await api('/api/monitors');
   const items = d.monitors || [];
@@ -515,8 +898,11 @@ refresh();
 loadLogs();
 loadDingtalk();
 loadSmartstrm();
+loadTmdb();
+refreshSubs();
 setInterval(refresh, 30000);
 setInterval(loadLogs, 30000);
+setInterval(refreshSubs, 30000);
 </script>
 </body>
 </html>
