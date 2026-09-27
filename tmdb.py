@@ -12,6 +12,7 @@ import urllib.request
 import monitor_store
 
 BASE = "https://api.themoviedb.org/3"
+IMG_BASE = "https://image.tmdb.org/t/p/w500"
 TIMEOUT = 10
 
 
@@ -58,7 +59,8 @@ def _get(path, api_key, params=None):
 
 
 def fetch_tv_info(tmdb_id, api_key):
-    """返回 (info, err)。info = {"name", "total_episodes", "seasons":[...]}"""
+    """返回 (info, err)。info = {"name", "total_episodes", "seasons":[...],
+    "poster_url", "overview"}"""
     data, err = _get("/tv/%s" % tmdb_id, api_key)
     if err:
         return None, err
@@ -72,8 +74,10 @@ def fetch_tv_info(tmdb_id, api_key):
         seasons.append({"season_number": s.get("season_number"),
                         "episode_count": s.get("episode_count") or 0,
                         "name": s.get("name") or ""})
+    poster_path = data.get("poster_path") or ""
     return {"name": name, "total_episodes": data.get("number_of_episodes") or 0,
-            "seasons": seasons}, None
+            "seasons": seasons, "poster_url": (IMG_BASE + poster_path) if poster_path else "",
+            "overview": data.get("overview") or ""}, None
 
 
 def fetch_season_episode_count(tmdb_id, season, api_key):
@@ -99,6 +103,31 @@ def resolve_total_episodes(tmdb_id, season, api_key):
         return None, name, err2
     season_name = s.get("name") or ("第%s季" % season)
     return s["episode_count"], "%s %s" % (name, season_name), None
+
+
+def resolve_subscription_meta(tmdb_id, season, api_key):
+    """新建订阅 / 刷新订阅信息时用：一次查出总集数、剧名、海报、简介。
+    返回 (meta_or_None, err)。meta = {"name","total_episodes","poster_url","overview"}
+    即使总集数那一步（分季）查询失败，只要剧集主信息查到了，也会把 name/poster/overview
+    带回去（err 会非空提示总集数没查到，调用方自己决定要不要紧着这个失败）。
+    """
+    info, err = fetch_tv_info(tmdb_id, api_key)
+    if err:
+        return None, err
+    name = info["name"]
+    total = info["total_episodes"]
+    meta = {"name": name, "total_episodes": total,
+            "poster_url": info["poster_url"], "overview": info["overview"]}
+    if season in (None, "", 0):
+        return meta, None
+    s, err2 = fetch_season_episode_count(tmdb_id, season, api_key)
+    if err2:
+        meta["total_episodes"] = None
+        return meta, err2
+    season_name = s.get("name") or ("第%s季" % season)
+    meta["name"] = "%s %s" % (name, season_name)
+    meta["total_episodes"] = s["episode_count"]
+    return meta, None
 
 
 def test(api_key):

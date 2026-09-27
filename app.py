@@ -14,6 +14,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import dingtalk
+import emby
 import gygo_log
 import monitor
 import monitor_store
@@ -280,6 +281,20 @@ def act_tmdb_test(api_key):
     return {"ok": ok, "msg": msg}
 
 
+def act_emby_get():
+    return {"ok": True, "config": emby.get_config()}
+
+
+def act_emby_save(host, api_key, enabled):
+    cfg = emby.save_config(host, api_key, enabled)
+    return {"ok": True, "config": cfg, "msg": "已保存"}
+
+
+def act_emby_test(host, api_key):
+    ok, msg = emby.test(host, api_key)
+    return {"ok": ok, "msg": msg}
+
+
 def act_add_subscription(name, tmdb_id, season, target_path, interval_min,
                          keep_tree, total_episodes):
     if not name and not tmdb_id:
@@ -311,6 +326,16 @@ def act_remove_sub_link(sid, lid):
     return {"ok": True, "subscription": sub}
 
 
+def act_refresh_sub_meta(sid):
+    sub, err = subscription.refresh_meta(sid)
+    if not sub:
+        raise ApiError(err or "刷新失败")
+    r = {"ok": True, "subscription": sub}
+    if err:
+        r["warn"] = err  # 海报/简介可能已经更新成功了，err 只是提示总集数没查到之类
+    return r
+
+
 def act_scan_subscription(sid):
     _need_client()
     s = monitor_store.get_subscription(sid)
@@ -332,7 +357,7 @@ def act_scan_subscription(sid):
 
 
 SUB_EDITABLE = ("name", "target_path", "interval_min", "keep_tree", "enabled",
-               "total_episodes", "season")
+               "total_episodes", "season", "tmdb_id")
 
 
 def act_update_subscription(sid, patch):
@@ -362,6 +387,8 @@ def act_update_subscription(sid, patch):
         clean["keep_tree"] = bool(clean["keep_tree"])
     if "enabled" in clean:
         clean["enabled"] = bool(clean["enabled"])
+    if "tmdb_id" in clean:
+        clean["tmdb_id"] = str(clean["tmdb_id"]).strip()
     monitor_store.update_subscription(sid, **clean)
     gygo_log.info("修改订阅", id=sid, fields=",".join(clean.keys()))
     # 手动改了总集数、之前判过"已完结"的，重新判一下要不要恢复追更
@@ -578,6 +605,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/tmdb":
             return self._send(200, act_tmdb_get())
 
+        if path == "/api/emby":
+            return self._send(200, act_emby_get())
+
         if path == "/api/subscriptions":
             return self._send(200, {"ok": True,
                                     "subscriptions": monitor_store.list_subscriptions()})
@@ -636,6 +666,14 @@ class Handler(BaseHTTPRequestHandler):
                 r = act_tmdb_test(data.get("api_key"))
                 return self._send(200, r)
 
+            if path == "/api/emby":
+                r = act_emby_save(data.get("host"), data.get("api_key"), data.get("enabled"))
+                return self._send(200, r)
+
+            if path == "/api/emby/test":
+                r = act_emby_test(data.get("host"), data.get("api_key"))
+                return self._send(200, r)
+
             if path == "/api/subscriptions":
                 r = act_add_subscription(
                     (data.get("name") or "").strip(),
@@ -666,6 +704,10 @@ class Handler(BaseHTTPRequestHandler):
                 r = act_add_sub_link(sid, (data.get("share_url") or "").strip(),
                                      (data.get("note") or "").strip())
                 return self._send(200, r)
+
+            if path.startswith("/api/subscriptions/") and path.endswith("/refresh-meta"):
+                sid = int(path.split("/")[3])
+                return self._send(200, act_refresh_sub_meta(sid))
 
             # 编辑订阅：/api/subscriptions/{id}（只认三段，多的当未知路由）
             if path.startswith("/api/subscriptions/"):

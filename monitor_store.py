@@ -25,7 +25,7 @@ def _now():
 
 def _empty():
     return {"monitors": [], "subscriptions": [], "auth": {}, "dingtalk": {},
-            "smartstrm": {}, "tmdb": {}, "seq": 0}
+            "smartstrm": {}, "tmdb": {}, "emby": {}, "seq": 0}
 
 
 def _load():
@@ -44,6 +44,7 @@ def _load():
     data.setdefault("dingtalk", {})
     data.setdefault("smartstrm", {})
     data.setdefault("tmdb", {})
+    data.setdefault("emby", {})
     data.setdefault("seq", 0)
     return data
 
@@ -181,6 +182,22 @@ def save_tmdb(**fields):
         return dict(data["tmdb"])
 
 
+# ------------------------------------------------------------------ Emby 配置
+
+def load_emby():
+    with _lock:
+        return dict(_load()["emby"])
+
+
+def save_emby(**fields):
+    with _lock:
+        data = _load()
+        data["emby"].update(fields)
+        data["emby"]["updated_at"] = _now()
+        _save(data)
+        return dict(data["emby"])
+
+
 # ------------------------------------------------------------------ 订阅追更
 # 一个订阅 = 一部剧（可选绑定 TMDB ID 查总集数）+ 多个分享链接。
 # 以「集数」为基线（have: {"3": {...}}），不是以单条分享的 fid 集合为基线，
@@ -209,6 +226,8 @@ def add_subscription(fields):
             "tmdb_id": "",
             "season": None,           # None = 不分季，按整部剧的总集数
             "total_episodes": None,   # None = 未知，不判断"缺了哪几集"，来什么转什么
+            "poster_url": "",         # TMDB 海报图 URL（新建/刷新时自动查）
+            "overview": "",           # TMDB 简介
             "target_path": "",
             "keep_tree": True,
             "interval_min": MIN_INTERVAL,
@@ -219,6 +238,8 @@ def add_subscription(fields):
             "link_seq": 0,
             "have": {},                # {"集数": {"fid","name","link_id"}}
             "dir_fids": {},
+            "emby_series_id": None,    # 缓存：这部剧在 Emby 里对应的 Item Id
+            "emby_have": [],           # 缓存：Emby 库里已经有的集数（上次查询结果）
             "last_scan": "",
             "last_result": "",
             "added_at": _now(),

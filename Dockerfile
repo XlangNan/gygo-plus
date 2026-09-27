@@ -8,7 +8,7 @@ WORKDIR /app
 # 只拷贝运行需要的文件，主流程零第三方依赖，无需 pip install。
 # 唯一的例外是"订阅追更"的文件名识别（guessit / anitopy），见下面的 pip install。
 COPY guangya.py share_gy.py monitor.py monitor_store.py gygo_log.py app.py \
-     dingtalk.py smartstrm.py subscription.py tmdb.py episode_parse.py \
+     dingtalk.py smartstrm.py subscription.py tmdb.py episode_parse.py emby.py \
      selftest.py index.html ./
 COPY tests/ ./tests/
 COPY entrypoint.sh /entrypoint.sh
