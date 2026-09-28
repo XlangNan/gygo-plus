@@ -281,6 +281,94 @@ def act_tmdb_test(api_key):
     return {"ok": ok, "msg": msg}
 
 
+def _annotate_discover_items(items):
+    """给推荐/搜索结果的每一条打上"追更中/已入库"的角标信息。
+    只查一次订阅列表（本地，不用打接口）+ 一次 Emby 库（带缓存），
+    不管这批 items 有多少条，都不会随条目数增加而多打请求。
+    """
+    subs = monitor_store.list_subscriptions()
+    sub_by_tmdb = {}
+    for s in subs:
+        tid = s.get("tmdb_id")
+        if tid:
+            sub_by_tmdb[str(tid)] = {"status": s.get("status"), "id": s.get("id")}
+
+    emby_ids = set()
+    ecfg = emby.get_config()
+    if ecfg["enabled"] and ecfg["host"] and ecfg["api_key"]:
+        ids, err = emby.get_library_tmdb_ids(ecfg["host"], ecfg["api_key"])
+        if not err:
+            emby_ids = ids
+
+    for it in items:
+        tid = str(it.get("id"))
+        hit = sub_by_tmdb.get(tid)
+        it["sub_status"] = hit["status"] if hit else None
+        it["sub_id"] = hit["id"] if hit else None
+        it["in_emby"] = tid in emby_ids
+    return items
+
+
+def act_tmdb_home():
+    cfg = tmdb.get_config()
+    if not cfg.get("api_key"):
+        raise ApiError("还没配置 TMDB API Key")
+    rows = tmdb.fetch_home_rows(cfg["api_key"])
+    for row in rows:
+        _annotate_discover_items(row.get("items") or [])
+    return {"ok": True, "rows": rows}
+
+
+def act_tmdb_discover(category, sort, page):
+    cfg = tmdb.get_config()
+    if not cfg.get("api_key"):
+        raise ApiError("还没配置 TMDB API Key")
+    result, err = tmdb.discover_tv(cfg["api_key"], category=category, sort=sort, page=page)
+    if err:
+        raise ApiError(err)
+    _annotate_discover_items(result.get("items") or [])
+    return {"ok": True, "result": result}
+
+
+def act_tmdb_search(query, page):
+    cfg = tmdb.get_config()
+    if not cfg.get("api_key"):
+        raise ApiError("还没配置 TMDB API Key")
+    result, err = tmdb.search_tv(cfg["api_key"], query, page)
+    if err:
+        raise ApiError(err)
+    _annotate_discover_items(result.get("items") or [])
+    return {"ok": True, "result": result}
+
+
+def act_tmdb_detail(tmdb_id):
+    cfg = tmdb.get_config()
+    if not cfg.get("api_key"):
+        raise ApiError("还没配置 TMDB API Key")
+    detail, err = tmdb.fetch_tv_detail(tmdb_id, cfg["api_key"])
+    if err:
+        raise ApiError(err)
+    annotated = _annotate_discover_items([{"id": detail.get("id")}])[0]
+    detail["sub_status"] = annotated["sub_status"]
+    detail["sub_id"] = annotated["sub_id"]
+    detail["in_emby"] = annotated["in_emby"]
+
+    # 每季已入库多少集：只有 Emby 联动开着、且这部剧真的能在库里匹配到才查，
+    # 查不到/没配置就跳过，前端会按"没有这个字段"处理，不瞎显示 0/N
+    ecfg = emby.get_config()
+    if ecfg["enabled"] and ecfg["host"] and ecfg["api_key"] and detail.get("seasons"):
+        lib_map, lerr = emby.get_library_map(ecfg["host"], ecfg["api_key"])
+        series_id = lib_map.get(str(detail["id"])) if not lerr else None
+        if series_id:
+            grouped, gerr = emby.fetch_episodes_grouped_by_season(
+                ecfg["host"], ecfg["api_key"], series_id)
+            if not gerr and grouped:
+                for s in detail["seasons"]:
+                    have = grouped.get(s["season_number"])
+                    s["emby_have_count"] = len(have) if have else 0
+    return {"ok": True, "detail": detail}
+
+
 def act_emby_get():
     return {"ok": True, "config": emby.get_config()}
 
@@ -604,6 +692,44 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/tmdb":
             return self._send(200, act_tmdb_get())
+
+        if path == "/api/tmdb/home":
+            try:
+                return self._send(200, act_tmdb_home())
+            except ApiError as e:
+                return self._send(200, {"ok": False, "msg": str(e)})
+
+        if path == "/api/tmdb/discover":
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            category = (q.get("category") or ["all"])[0]
+            sort = (q.get("sort") or ["popularity"])[0]
+            try:
+                page = int((q.get("page") or ["1"])[0])
+            except ValueError:
+                page = 1
+            try:
+                return self._send(200, act_tmdb_discover(category, sort, page))
+            except ApiError as e:
+                return self._send(200, {"ok": False, "msg": str(e)})
+
+        if path.startswith("/api/tmdb/tv/"):
+            tmdb_id = path.rsplit("/", 1)[-1]
+            try:
+                return self._send(200, act_tmdb_detail(tmdb_id))
+            except ApiError as e:
+                return self._send(200, {"ok": False, "msg": str(e)})
+
+        if path == "/api/tmdb/search":
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            query = (q.get("q") or [""])[0]
+            try:
+                page = int((q.get("page") or ["1"])[0])
+            except ValueError:
+                page = 1
+            try:
+                return self._send(200, act_tmdb_search(query, page))
+            except ApiError as e:
+                return self._send(200, {"ok": False, "msg": str(e)})
 
         if path == "/api/emby":
             return self._send(200, act_emby_get())

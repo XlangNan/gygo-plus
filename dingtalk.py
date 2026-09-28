@@ -19,6 +19,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import episode_parse
 import gygo_log
 import monitor_store
 
@@ -112,38 +113,94 @@ def send(title, text):
 
 
 # ------------------------------------------------------------------ 事件级便捷方法
-# 这几个函数专门给 monitor.py 调用，出错也不会往外抛异常，不影响主流程。
+# 这几个函数专门给 monitor.py / subscription.py 调用，出错也不会往外抛异常，不影响主流程。
+#
+# 关于通知标题：钉钉机器人 markdown 消息的 title 就是手机通知栏 / 会话列表里显示的
+# 预览文字，所以关键信息（剧名、集数）必须放进 title，不然要点进钉钉才看得到。
+
+def _compress_ranges(nums):
+    """[34, 35, 37] -> "34-35,37"。"""
+    arr = sorted(set(int(n) for n in nums))
+    if not arr:
+        return ""
+    out, start, prev = [], arr[0], arr[0]
+    for n in arr[1:]:
+        if n == prev + 1:
+            prev = n
+            continue
+        out.append(str(start) if start == prev else "%d-%d" % (start, prev))
+        start = prev = n
+    out.append(str(start) if start == prev else "%d-%d" % (start, prev))
+    return ",".join(out)
+
+
+def _episode_numbers(file_names, episodes=None):
+    """优先用调用方直接给的集数（订阅扫描已经解析过）；没给就从文件名里解析。
+    返回 (集数集合, 有多少个文件没解析出集数)。"""
+    if episodes:
+        return set(int(e) for e in episodes), 0
+    eps, unparsed = set(), 0
+    for n in file_names:
+        try:
+            ep = episode_parse.parse_episode(n)
+        except Exception:
+            ep = None
+        if ep is None:
+            unparsed += 1
+        else:
+            eps.add(ep)
+    return eps, unparsed
+
+
+def _short(text, limit=24):
+    text = (text or "").strip()
+    return text if len(text) <= limit else text[:limit - 1] + "…"
+
 
 def notify_monitoring(link_name, target_path=""):
     try:
-        send("📡 开始监控",
+        name = link_name or "未知剧集"
+        send("📡 开始监控：%s" % _short(name),
              "**%s**\n\n已添加监控，出新集会自动转存到 `%s`"
-             % (link_name or "未知剧集", target_path or "/（根目录）"))
+             % (name, target_path or "/（根目录）"))
     except Exception as e:
         gygo_log.warn("钉钉通知异常(monitoring)", err=str(e))
 
 
-def notify_transferred(link_name, file_names, target_path=""):
+def notify_transferred(link_name, file_names, target_path="", episodes=None):
+    """转存成功通知。标题形如「✅ 转存了 兰香如故 34-35集」，通知栏直接可见。"""
     file_names = [n for n in (file_names or []) if n]
     if not file_names:
         return
     try:
+        name = link_name or "未知剧集"
+        eps, unparsed = _episode_numbers(file_names, episodes)
+        if eps:
+            ep_text = _compress_ranges(eps)
+            title = "✅ 转存了 %s %s集" % (_short(name), ep_text)
+            if unparsed:
+                title += "（另有%d个文件）" % unparsed
+            head = "集数：**%s**\n\n" % ep_text
+        else:
+            title = "✅ 转存了 %s %d个文件" % (_short(name), len(file_names))
+            head = ""
+
         shown = file_names[:MAX_LIST_SHOW]
         lines = "\n".join("- %s" % n for n in shown)
         if len(file_names) > MAX_LIST_SHOW:
             lines += "\n- …等共 %d 个" % len(file_names)
-        send("✅ 转存成功",
-             "**%s**\n\n转存到 `%s`，新增 %d 个：\n%s"
-             % (link_name or "未知剧集", target_path or "/（根目录）",
-                len(file_names), lines))
+        send(title,
+             "**%s**\n\n%s转存到 `%s`，新增 %d 个：\n%s"
+             % (name, head, target_path or "/（根目录）", len(file_names), lines))
     except Exception as e:
         gygo_log.warn("钉钉通知异常(transferred)", err=str(e))
 
 
 def notify_invalid(link_name, reason=""):
     try:
-        send("⚠️ 链接失效",
+        name = link_name or "未知剧集"
+        send("⚠️ 链接失效：%s" % _short(name),
              "**%s**\n\n分享链接已失效，已停止监控。%s"
-             % (link_name or "未知剧集", ("原因：" + reason) if reason else ""))
+             % (name, ("原因：" + reason) if reason else ""))
     except Exception as e:
         gygo_log.warn("钉钉通知异常(invalid)", err=str(e))

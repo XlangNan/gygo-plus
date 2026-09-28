@@ -12,6 +12,7 @@ Tmdb ID，两者不是一回事）。这里拉库里所有 Series 条目、按 P
 """
 
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -19,6 +20,9 @@ import urllib.request
 import monitor_store
 
 TIMEOUT = 12
+
+_library_cache = {"ts": 0, "map": {}}  # tmdb_id(str) -> Emby series Item Id
+_LIBRARY_TTL = 600  # 库里所有剧的 TMDB ID 映射缓存 10 分钟，供推荐页"已入库"角标/详情页用
 
 
 def get_config():
@@ -89,6 +93,57 @@ def find_series_id(host, api_key, tmdb_id):
                 return it.get("Id"), it.get("Name"), None
     return None, None, ("Emby 库里没找到 TMDB ID=%s 对应的剧"
                         "（还没入库，或者刮削用的元数据源不是 TMDB）" % tmdb_id)
+
+
+def get_library_map(host, api_key, force=False):
+    """返回 (tmdb_id字符串 -> Emby Series Item Id 的字典, err)，带缓存（10分钟）。
+    推荐页"已入库"角标、详情页"每季入库集数"都基于这份映射，只用一次全库查询
+    就够，不会随要判断的剧数量增加而多打 Emby。查询失败时沿用上一次的缓存
+    （数据暂时不是最新的，好过页面直接报错）。
+    """
+    now = time.time()
+    if not force and _library_cache["map"] and (now - _library_cache["ts"]) < _LIBRARY_TTL:
+        return _library_cache["map"], None
+    data, err = _get(host, api_key, "/Items", {
+        "IncludeItemTypes": "Series", "Recursive": "true", "Fields": "ProviderIds"})
+    if err:
+        return _library_cache["map"], err
+    m = {}
+    for it in (data.get("Items") or []):
+        pids = it.get("ProviderIds") or {}
+        for k, v in pids.items():
+            if k.lower() == "tmdb" and v:
+                m[str(v)] = it.get("Id")
+    _library_cache["ts"] = now
+    _library_cache["map"] = m
+    return m, None
+
+
+def get_library_tmdb_ids(host, api_key, force=False):
+    """返回 (tmdb_id集合, err)——get_library_map 的简化版，只要有没有，不要 Id。"""
+    m, err = get_library_map(host, api_key, force=force)
+    return set(m.keys()), err
+
+
+def fetch_episodes_grouped_by_season(host, api_key, series_id):
+    """返回 (季号 -> 已入库集数集合 的字典, err)。给详情页"每季入库了多少集"用——
+    一次性把整部剧的分集都拉下来按季分组，比每季单独查一次快。
+    """
+    params = {"Fields": "IndexNumber,ParentIndexNumber", "Recursive": "true"}
+    data, err = _get(host, api_key, "/Shows/%s/Episodes" % series_id, params)
+    if err:
+        return None, err
+    grouped = {}
+    for it in (data.get("Items") or []):
+        s, e = it.get("ParentIndexNumber"), it.get("IndexNumber")
+        if s is None or e is None:
+            continue
+        try:
+            s, e = int(s), int(e)
+        except (TypeError, ValueError):
+            continue
+        grouped.setdefault(s, set()).add(e)
+    return grouped, None
 
 
 def fetch_have_episodes(host, api_key, tmdb_id, season=None, series_id=None):

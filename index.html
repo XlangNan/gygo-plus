@@ -124,6 +124,75 @@
   .diritem{padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;gap:8px;align-items:center}
   .diritem:hover{background:var(--hover-bg)}
   .editrow td{background:var(--editrow-bg)}
+
+  /* 剧集推荐 */
+  .shelf-hd{display:flex;align-items:center;gap:10px;margin:22px 0 10px}
+  .shelf-hd h3{font-size:15px;margin:0;flex:0 0 auto}
+  .shelf-hd .more{color:var(--dim);font-size:12.5px;cursor:pointer;background:transparent;
+    border:0;padding:0}
+  .shelf-hd .more:hover{color:var(--acc)}
+  .shelf{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x proximity}
+  .shelf::-webkit-scrollbar{height:7px}
+  .shelf::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+  .poster-card{flex:0 0 122px;cursor:pointer;scroll-snap-align:start}
+  .poster-card .pc-imgwrap{position:relative;width:122px;height:183px;
+    border-radius:9px;overflow:hidden}
+  .poster-card .pc-badges{position:absolute;left:0;right:0;bottom:0;
+    display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding:18px 6px 6px;
+    background:linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0));
+    pointer-events:none}
+  .pc-badge{display:inline-block;box-sizing:border-box;font-size:10px;line-height:14px;
+    padding:1px 6px;border:1px solid transparent;border-radius:5px;font-weight:700;
+    white-space:nowrap;color:#fff}
+  .pc-badge.st-run{background:rgba(91,140,255,.9)}
+  .pc-badge.st-done{background:rgba(62,207,142,.9)}
+  .pc-badge.st-err{background:rgba(255,107,107,.9)}
+  .pc-badge.emby{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.4)}
+  .status-pill{display:inline-block;font-size:11.5px;padding:3px 11px;border-radius:20px;
+    font-weight:700;margin:0 6px 6px 0}
+  .season-row{padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .season-row-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .season-emby{font-weight:700;margin-left:8px}
+  .season-emby.full{color:var(--ok)}
+  .season-emby.part{color:var(--warn)}
+  .season-emby.none{color:var(--dim);font-weight:400}
+  .season-bar{height:4px;border-radius:2px;background:var(--hover-bg);margin-top:7px;overflow:hidden}
+  .season-bar-fill{height:100%;background:var(--warn);border-radius:2px}
+  .season-bar-fill.full{background:var(--ok)}
+  .status-pill.st-run{background:rgba(91,140,255,.16);color:var(--acc)}
+  .status-pill.st-done{background:rgba(62,207,142,.16);color:var(--ok)}
+  .status-pill.st-err{background:rgba(255,107,107,.16);color:var(--err)}
+  .status-pill.emby{background:var(--hover-bg);color:var(--dim);border:1px solid var(--line)}
+  .poster-card img{width:122px;height:183px;object-fit:cover;border-radius:9px;
+    background:var(--input-bg);border:1px solid var(--line);display:block;
+    transition:transform .15s,border-color .15s}
+  .poster-card:hover img{transform:translateY(-3px);border-color:var(--acc)}
+  .poster-card .pc-title{font-size:12.5px;margin-top:7px;line-height:1.35;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .poster-card .pc-meta{font-size:11px;color:var(--dim);margin-top:3px;
+    display:flex;align-items:center;gap:6px}
+  .rating-badge{display:inline-block;background:rgba(255,180,84,.16);color:var(--warn);
+    font-size:11px;padding:1px 6px;border-radius:5px;font-weight:700}
+  .discover-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:16px 12px}
+  .discover-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .seg{display:flex;background:var(--input-bg);border:1px solid var(--line);
+    border-radius:8px;overflow:hidden}
+  .seg button{background:transparent;border:0;padding:7px 13px;font-size:12.5px;
+    color:var(--dim);cursor:pointer;font-family:inherit;white-space:nowrap}
+  .seg button.active{background:var(--acc);color:#fff}
+  .box.wide{width:min(760px,100%);max-height:85vh}
+  .tv-backdrop{width:100%;aspect-ratio:16/6;object-fit:cover;background:var(--input-bg);
+    display:block;border-radius:0}
+  .tv-detail-hd{display:flex;gap:16px;padding:16px}
+  .tv-detail-hd img{width:110px;height:165px;object-fit:cover;border-radius:8px;
+    flex:0 0 110px;background:var(--input-bg);border:1px solid var(--line)}
+  .genre-pill{display:inline-block;background:var(--hover-bg);color:var(--dim);
+    font-size:11.5px;padding:2px 9px;border-radius:20px;margin:0 5px 5px 0}
+  .cast-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:10px}
+  .cast-grid img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:7px;
+    background:var(--input-bg);border:1px solid var(--line)}
+  .cast-grid .cg-name{font-size:11.5px;margin-top:4px;line-height:1.3}
+  .cast-grid .cg-role{font-size:10.5px;color:var(--dim)}
 </style>
 </head>
 <body>
@@ -148,6 +217,7 @@
     </div>
     <div class="side-status" id="sideStatus">检查登录状态…</div>
     <button class="nav-item" data-view="monitors">📡 分享监控</button>
+    <button class="nav-item" data-view="discover">🍿 剧集推荐</button>
     <button class="nav-item" data-view="subscriptions">📺 订阅追更</button>
     <button class="nav-item" data-view="dingtalk">🔔 钉钉通知</button>
     <button class="nav-item" data-view="smartstrm">🎬 SmartStrm 联动</button>
@@ -280,6 +350,64 @@
     </div>
     </section>
 
+    <section class="view" id="view-discover">
+    <!-- 搜索 -->
+    <div class="card" style="padding:14px 16px">
+      <div style="display:flex;gap:8px">
+        <input id="tvSearchInput" placeholder="搜索剧名，比如：庆余年（支持模糊搜索，打个大概的名字就行）"
+          onkeydown="if(event.key==='Enter') doTvSearch()">
+        <button id="btnTvSearch" style="flex:0 0 auto">搜索</button>
+      </div>
+    </div>
+
+    <!-- 搜索结果 -->
+    <div class="card" id="discoverSearch" style="display:none">
+      <h2>🔍 搜索结果：<span id="searchQueryLabel" style="color:var(--dim);font-weight:400"></span>
+        <span class="sp"></span>
+        <button class="ghost tiny" onclick="closeTvSearch()">← 返回推荐</button>
+      </h2>
+      <div class="discover-grid" id="searchGrid"><div class="empty">加载中…</div></div>
+      <div style="text-align:center;margin-top:18px">
+        <button class="ghost" id="btnSearchMore" style="display:none">加载更多</button>
+      </div>
+    </div>
+
+    <!-- 剧集推荐首页 -->
+    <div class="card" id="discoverHome">
+      <h2>🍿 剧集推荐 <span class="sp"></span>
+        <button class="ghost tiny" onclick="openDiscoverAll('all','popularity')">查看所有剧集</button>
+      </h2>
+      <div class="hint" style="margin-top:0">
+        数据来自 TMDB，需要先在「🎯 TMDB 设置」里配置好 API Key。点海报可以看详情，详情页能直接去建订阅。
+      </div>
+      <div id="discoverRows"><div class="empty">加载中…</div></div>
+    </div>
+
+    <!-- 浏览全部剧集 -->
+    <div class="card" id="discoverAll" style="display:none">
+      <h2>🎞️ 浏览全部剧集 <span class="sp"></span>
+        <button class="ghost tiny" onclick="closeDiscoverAll()">← 返回推荐</button>
+      </h2>
+      <div class="discover-toolbar">
+        <div class="seg" id="daCategorySeg">
+          <button data-v="all" class="active">全部</button>
+          <button data-v="kr_jp">日韩剧</button>
+          <button data-v="us_eu">欧美剧</button>
+          <button data-v="cn">国产剧</button>
+        </div>
+        <div class="seg" id="daSortSeg">
+          <button data-v="popularity" class="active">热度</button>
+          <button data-v="rating">评分</button>
+          <button data-v="latest">最新</button>
+        </div>
+      </div>
+      <div class="discover-grid" id="discoverGrid"><div class="empty">加载中…</div></div>
+      <div style="text-align:center;margin-top:18px">
+        <button class="ghost" id="btnDaMore" style="display:none">加载更多</button>
+      </div>
+    </div>
+    </section>
+
     <section class="view" id="view-subscriptions">
     <!-- 订阅追更 -->
     <div class="card">
@@ -405,6 +533,16 @@
   </div>
 </div>
 
+<!-- 剧集详情弹窗 -->
+<div class="modal" id="tvModal">
+  <div class="box wide">
+    <div class="hd">剧集详情 <span style="flex:1"></span>
+      <button class="ghost tiny" id="tvModalClose">✕ 关闭</button>
+    </div>
+    <div class="bd" id="tvModalBody">加载中…</div>
+  </div>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
 let logLevelOnly = false;
@@ -425,10 +563,15 @@ try{ _savedTheme = localStorage.getItem('gygo_theme') || 'dark'; }catch(e){}
 applyTheme(_savedTheme);
 
 // ---------- 左侧导航切换 ----------
+let discoverLoaded = false;
 function switchView(view){
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
   try{ localStorage.setItem('gygo_view', view); }catch(e){}
+  if(view === 'discover' && !discoverLoaded){
+    discoverLoaded = true;
+    loadDiscoverHome();
+  }
 }
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.onclick = () => switchView(btn.dataset.view);
@@ -542,6 +685,242 @@ $('btnSsTest').onclick = async () => {
   $('btnSsTest').disabled = false; $('btnSsTest').textContent = '测试连通';
   show($('ssMsg'), r.msg || (r.ok ? '触发成功' : '触发失败'), r.ok);
 };
+
+// ---------- 剧集推荐 ----------
+const SUB_STATUS_BADGE = {
+  pending: {text: '追更中', cls: 'st-run'},
+  ok: {text: '追更中', cls: 'st-run'},
+  complete: {text: '已追完', cls: 'st-done'},
+  paused: {text: '追更(暂停)', cls: 'st-run'},
+  error: {text: '追更(出错)', cls: 'st-err'},
+  invalid: {text: '链接失效', cls: 'st-err'},
+};
+function posterCardHtml(it){
+  const rating = it.vote_average ? `<span class="rating-badge">★ ${it.vote_average}</span>` : '';
+  const year = (it.first_air_date||'').slice(0,4);
+  const imgTag = it.poster_url
+    ? `<img src="${esc(it.poster_url)}" alt="" loading="lazy" onerror="this.style.opacity=0.25">`
+    : `<div style="width:122px;height:183px;border-radius:9px;background:var(--input-bg);
+         border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+         color:var(--dim);font-size:28px">🎬</div>`;
+  const subB = it.sub_status ? SUB_STATUS_BADGE[it.sub_status] : null;
+  let badges = '';
+  if(subB) badges += `<span class="pc-badge ${subB.cls}">${subB.text}</span>`;
+  if(it.in_emby) badges += `<span class="pc-badge emby">已入库</span>`;
+  return `<div class="poster-card" onclick="openTvDetail(${it.id})">
+    <div class="pc-imgwrap">
+      ${imgTag}
+      ${badges ? `<div class="pc-badges">${badges}</div>` : ''}
+    </div>
+    <div class="pc-title">${esc(it.name)}</div>
+    <div class="pc-meta">${rating}${year?`<span>${year}</span>`:''}</div>
+  </div>`;
+}
+
+function renderShelf(row){
+  if(row.err){
+    return `<div class="shelf-hd"><h3>${esc(row.label)}</h3></div>
+      <div class="empty">加载失败：${esc(row.err)}</div>`;
+  }
+  if(!row.items || !row.items.length){
+    return `<div class="shelf-hd"><h3>${esc(row.label)}</h3></div><div class="empty">暂无数据</div>`;
+  }
+  return `<div class="shelf-hd">
+      <h3>${esc(row.label)}</h3>
+      <button class="more" onclick="openDiscoverAll('${row.category}','popularity')">查看全部 →</button>
+    </div>
+    <div class="shelf">${row.items.map(posterCardHtml).join('')}</div>`;
+}
+
+async function loadDiscoverHome(){
+  $('discoverRows').innerHTML = '<div class="empty">加载中…</div>';
+  const r = await api('/api/tmdb/home');
+  if(!r.ok){
+    $('discoverRows').innerHTML = `<div class="empty">${esc(r.msg || '加载失败，先去「TMDB 设置」配置 API Key')}</div>`;
+    return;
+  }
+  $('discoverRows').innerHTML = r.rows.map(renderShelf).join('');
+}
+
+let daCategory = 'all', daSort = 'popularity', daPage = 1, daTotalPages = 1, daItems = [];
+let currentTvDetail = null;
+
+function openDiscoverAll(category, sort){
+  daCategory = category; daSort = sort; daPage = 1; daItems = [];
+  document.querySelectorAll('#daCategorySeg button').forEach(b => b.classList.toggle('active', b.dataset.v === category));
+  document.querySelectorAll('#daSortSeg button').forEach(b => b.classList.toggle('active', b.dataset.v === sort));
+  $('discoverHome').style.display = 'none';
+  $('discoverAll').style.display = 'block';
+  loadDiscoverAll(false);
+}
+function closeDiscoverAll(){
+  $('discoverAll').style.display = 'none';
+  $('discoverHome').style.display = 'block';
+}
+document.querySelectorAll('#daCategorySeg button').forEach(b => {
+  b.onclick = () => {
+    daCategory = b.dataset.v; daPage = 1; daItems = [];
+    document.querySelectorAll('#daCategorySeg button').forEach(x => x.classList.toggle('active', x === b));
+    loadDiscoverAll(false);
+  };
+});
+document.querySelectorAll('#daSortSeg button').forEach(b => {
+  b.onclick = () => {
+    daSort = b.dataset.v; daPage = 1; daItems = [];
+    document.querySelectorAll('#daSortSeg button').forEach(x => x.classList.toggle('active', x === b));
+    loadDiscoverAll(false);
+  };
+});
+async function loadDiscoverAll(append){
+  if(!append) $('discoverGrid').innerHTML = '<div class="empty">加载中…</div>';
+  $('btnDaMore').disabled = true;
+  const r = await api(`/api/tmdb/discover?category=${daCategory}&sort=${daSort}&page=${daPage}`);
+  $('btnDaMore').disabled = false;
+  if(!r.ok){
+    $('discoverGrid').innerHTML = `<div class="empty">${esc(r.msg || '加载失败')}</div>`;
+    $('btnDaMore').style.display = 'none';
+    return;
+  }
+  const items = r.result.items || [];
+  daTotalPages = r.result.total_pages || 1;
+  daItems = append ? daItems.concat(items) : items;
+  $('discoverGrid').innerHTML = daItems.length
+    ? daItems.map(posterCardHtml).join('')
+    : '<div class="empty">没有找到剧集</div>';
+  $('btnDaMore').style.display = (daPage < daTotalPages) ? 'inline-block' : 'none';
+}
+$('btnDaMore').onclick = () => { daPage++; loadDiscoverAll(true); };
+
+async function openTvDetail(id){
+  $('tvModal').classList.add('show');
+  $('tvModalBody').innerHTML = '<div class="empty" style="padding:30px">加载中…</div>';
+  currentTvDetail = null;
+  const r = await api('/api/tmdb/tv/' + id);
+  if(!r.ok){
+    $('tvModalBody').innerHTML = `<div class="empty" style="padding:30px">${esc(r.msg || '加载失败')}</div>`;
+    return;
+  }
+  const d = r.detail;
+  currentTvDetail = d;
+  const genres = (d.genres||[]).map(g => `<span class="genre-pill">${esc(g)}</span>`).join('');
+  const cast = (d.cast||[]).map(c => {
+    const img = c.profile_url
+      ? `<img src="${esc(c.profile_url)}" alt="">`
+      : `<div style="aspect-ratio:2/3;border-radius:7px;background:var(--input-bg);
+           border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+           color:var(--dim)">👤</div>`;
+    return `<div>${img}<div class="cg-name">${esc(c.name)}</div>
+      <div class="cg-role">${esc(c.character||'')}</div></div>`;
+  }).join('');
+  const seasons = (d.seasons||[]).map(s => {
+    const hasEmby = typeof s.emby_have_count === 'number';
+    const total = s.episode_count || 0;
+    const have = hasEmby ? s.emby_have_count : 0;
+    const pct = total > 0 ? Math.min(100, Math.round(have / total * 100)) : 0;
+    const full = hasEmby && total > 0 && have >= total;
+    const embyText = hasEmby
+      ? `<span class="season-emby ${full ? 'full' : (have > 0 ? 'part' : 'none')}">已入库 ${have}/${total}</span>`
+      : '';
+    const bar = hasEmby
+      ? `<div class="season-bar"><div class="season-bar-fill ${full ? 'full' : ''}" style="width:${pct}%"></div></div>`
+      : '';
+    return `<div class="season-row">
+      <div class="season-row-top">
+        <span>${esc(s.name || ('第' + s.season_number + '季'))}</span>
+        <span style="color:var(--dim)">${total} 集${s.air_date ? (' · ' + s.air_date) : ''}${embyText}</span>
+      </div>
+      ${bar}
+    </div>`;
+  }).join('');
+  $('tvModalBody').innerHTML = `
+    ${d.backdrop_url ? `<img class="tv-backdrop" src="${esc(d.backdrop_url)}" alt="">` : ''}
+    <div class="tv-detail-hd">
+      ${d.poster_url ? `<img src="${esc(d.poster_url)}" alt="">`
+        : '<div style="width:110px;height:165px;border-radius:8px;background:var(--input-bg);border:1px solid var(--line)"></div>'}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:18px;font-weight:700">${esc(d.name)}</div>
+        <div style="color:var(--dim);font-size:12.5px;margin-top:4px">
+          ${esc(d.first_air_date || '未知首播')} · ${esc(d.status||'')} · ${d.number_of_seasons} 季 / ${d.number_of_episodes} 集
+          ${d.vote_average ? ` · <span class="rating-badge">★ ${d.vote_average}</span>（${d.vote_count} 人评）` : ''}
+        </div>
+        <div style="margin-top:8px">${genres}</div>
+        ${(d.sub_status || d.in_emby) ? `<div style="margin-top:2px">
+          ${d.sub_status && SUB_STATUS_BADGE[d.sub_status] ? `<span class="status-pill ${SUB_STATUS_BADGE[d.sub_status].cls}">${SUB_STATUS_BADGE[d.sub_status].text}</span>` : ''}
+          ${d.in_emby ? '<span class="status-pill emby">已入库 Emby</span>' : ''}
+        </div>` : ''}
+        ${d.sub_status
+          ? `<button style="margin-top:12px" onclick="goToSubscription(${d.sub_id})">查看这个订阅</button>`
+          : `<button style="margin-top:12px" onclick="goSubscribeFromDetail()">＋ 去建订阅追这部剧</button>`}
+      </div>
+    </div>
+    <div style="padding:0 16px 16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">简介</div>
+      <div style="color:var(--dim);font-size:13px;line-height:1.6;margin-bottom:16px">${esc(d.overview || '暂无简介')}</div>
+      ${seasons ? `<div style="font-size:13px;font-weight:600;margin-bottom:6px">分季</div><div style="margin-bottom:16px">${seasons}</div>` : ''}
+      ${cast ? `<div style="font-size:13px;font-weight:600;margin-bottom:8px">主演</div><div class="cast-grid">${cast}</div>` : ''}
+    </div>`;
+}
+$('tvModalClose').onclick = () => $('tvModal').classList.remove('show');
+
+function goSubscribeFromDetail(){
+  if(!currentTvDetail) return;
+  $('tvModal').classList.remove('show');
+  switchView('subscriptions');
+  $('subTmdbId').value = currentTvDetail.id;
+  $('subName').value = currentTvDetail.name;
+  $('subName').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function goToSubscription(subId){
+  $('tvModal').classList.remove('show');
+  switchView('subscriptions');
+  setTimeout(() => {
+    const el = document.getElementById('sub-card-' + subId);
+    if(!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.style.transition = 'box-shadow .3s';
+    el.style.boxShadow = '0 0 0 2px var(--acc)';
+    setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+  }, 80);
+}
+
+let tvSearchQuery = '', tvSearchPage = 1, tvSearchTotalPages = 1, tvSearchItems = [];
+
+async function doTvSearch(){
+  const q = $('tvSearchInput').value.trim();
+  if(!q) return;
+  tvSearchQuery = q; tvSearchPage = 1; tvSearchItems = [];
+  $('searchQueryLabel').textContent = q;
+  $('discoverHome').style.display = 'none';
+  $('discoverAll').style.display = 'none';
+  $('discoverSearch').style.display = 'block';
+  loadTvSearch(false);
+}
+function closeTvSearch(){
+  $('discoverSearch').style.display = 'none';
+  $('discoverHome').style.display = 'block';
+  $('tvSearchInput').value = '';
+}
+async function loadTvSearch(append){
+  if(!append) $('searchGrid').innerHTML = '<div class="empty">加载中…</div>';
+  $('btnSearchMore').disabled = true;
+  const r = await api(`/api/tmdb/search?q=${encodeURIComponent(tvSearchQuery)}&page=${tvSearchPage}`);
+  $('btnSearchMore').disabled = false;
+  if(!r.ok){
+    $('searchGrid').innerHTML = `<div class="empty">${esc(r.msg || '搜索失败')}</div>`;
+    $('btnSearchMore').style.display = 'none';
+    return;
+  }
+  const items = r.result.items || [];
+  tvSearchTotalPages = r.result.total_pages || 1;
+  tvSearchItems = append ? tvSearchItems.concat(items) : items;
+  $('searchGrid').innerHTML = tvSearchItems.length
+    ? tvSearchItems.map(posterCardHtml).join('')
+    : '<div class="empty">没搜到相关剧集，换个关键词试试</div>';
+  $('btnSearchMore').style.display = (tvSearchPage < tvSearchTotalPages) ? 'inline-block' : 'none';
+}
+$('btnTvSearch').onclick = doTvSearch;
+$('btnSearchMore').onclick = () => { tvSearchPage++; loadTvSearch(true); };
 
 // ---------- TMDB ----------
 async function loadTmdb(){
@@ -676,7 +1055,7 @@ async function refreshSubs(){
     const overviewHtml = s.overview
       ? `<div class="sub-overview">${esc(s.overview)}</div>`
       : `<div class="sub-overview" style="opacity:.55">暂无简介${s.tmdb_id ? '（点右上角"刷新简介"试试）' : '（没填 TMDB ID，或者还没配置 TMDB Key）'}</div>`;
-    html += `<div class="card" style="margin-bottom:10px;padding:14px">
+    html += `<div class="card" id="sub-card-${s.id}" style="margin-bottom:10px;padding:14px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <b>${esc(s.name)}</b>
         <span class="tag ${tag}">${label}</span>

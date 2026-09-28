@@ -199,6 +199,7 @@ def scan_subscription(sub, on_phase=None):
     links = list(sub.get("links") or [])
     link_patch = {}     # link_id -> 要覆盖到这个链接上的字段
     newly_names = []
+    newly_eps = []
     added_total = 0
     any_error = False
 
@@ -280,6 +281,7 @@ def scan_subscription(sub, on_phase=None):
             if missing is not None:
                 missing.discard(ep)
             newly_names.append(f.get("name") or f.get("path") or "")
+            newly_eps.append(ep)
             added_total += 1
         patch["last_result"] = "%s 本轮转存 %d 集" % (_now(), len(pairs))
         link_patch[lid] = patch
@@ -313,7 +315,8 @@ def scan_subscription(sub, on_phase=None):
     monitor_store.update_subscription(sid, have=have, links=new_links, dir_fids=dir_cache,
                                       last_scan=_now(), status=status, last_result=summary)
     if newly_names:
-        dingtalk.notify_transferred(sub.get("name"), newly_names, sub.get("target_path"))
+        dingtalk.notify_transferred(sub.get("name"), newly_names, sub.get("target_path"),
+                                    episodes=newly_eps)
         smartstrm.trigger(sub.get("target_path"))
     _phase("完成", added=added_total)
     return {"status": status, "added": added_total, "have": len(have), "total": total}
